@@ -7,6 +7,6 @@ fun main() {
     val lexer = Lexer()
     lexer.scan(reader.content)
     lexer.printTokens()
-    //val parser = Parser()
-    //parser.parse(lexer.tokens)
+    val parser = Parser()
+    parser.parse(lexer.tokens)
 }

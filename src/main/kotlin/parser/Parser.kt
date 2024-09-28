@@ -25,6 +25,12 @@ class Parser {
     )
 
     fun parse(tokens: List<Token>) {
+        val program = Program()
+        program.parse(tokens)
+        println("")
+    }
+
+    fun parseStatement(tokens: List<Token>) {
         var nodes = convertToNodes(tokens)
         nodes = removeBraces(nodes)
         var level = 2

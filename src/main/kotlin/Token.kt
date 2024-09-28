@@ -57,3 +57,11 @@ class Operator(val type: OperatorType, line: Int, position: Int) : Token(TokenTy
     }
 }
 
+fun findToken(tokenType: TokenType, tokens: List<Token>, start: Int): Int {
+    var i = start
+    while (i < tokens.size) {
+        if (tokens[i].tokenType == tokenType) return i
+        i++
+    }
+    return -1
+}
