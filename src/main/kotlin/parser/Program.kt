@@ -66,7 +66,7 @@ class Program {
             throw IllegalArgumentException("Function body expected at line " + tokens[i].line + ", position " + tokens[i].position)
         }
 
-        val functionEndPosition = findToken(TokenType.R_CURL, tokens, i)
+        val functionEndPosition = findLastBrace(tokens, i)
         if (functionEndPosition == -1) {
             throw IllegalArgumentException("Missing } for function $functionName")
         }
@@ -89,4 +89,5 @@ class Program {
     private fun unexpectedTokenError(token: Token) {
         throw IllegalArgumentException("Unexpected token at line " + token.line + ", position " + token.position)
     }
+
 }
