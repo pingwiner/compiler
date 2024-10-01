@@ -4,6 +4,17 @@ import org.pingwiner.compiler.*
 
 class Function(val name: String, val params: List<String>) {
     val mainBlock: Block? = null
+    val vars = mutableListOf<String>()
+    val statements = mutableListOf<Statement>()
+    var result: Return? = null
+
+    open class Statement(
+        val nodes: List<Node>
+    )
+
+    class Return(val statement: Statement) {
+
+    }
 
     fun parse(tokens: List<Token>) {
         parseBlock(tokens)
@@ -18,7 +29,12 @@ class Function(val name: String, val params: List<String>) {
                         i = parseVarDefinition(tokens, i)
                     }
 
-                    KeywordType.RETURN -> TODO()
+                    KeywordType.RETURN -> {
+                        val end = searchForEnd(tokens, i)
+                        val statement = parseStatement(tokens.subList(i + 1, end))
+                        i = end + 1
+                        result = Return(statement)
+                    }
                     KeywordType.FUN -> TODO()
                     KeywordType.IF -> TODO()
                     KeywordType.ELSE -> TODO()
@@ -27,13 +43,14 @@ class Function(val name: String, val params: List<String>) {
                 }
             } else {
                 val end = searchForEnd(tokens, i)
-                parseStatement(tokens.subList(i, end))
+                val statement = parseStatement(tokens.subList(i, end))
                 i = end + 1
+                statements.add(statement)
             }
         }
     }
 
-    private fun parseStatement(tokens: List<Token>) {
+    private fun parseStatement(tokens: List<Token>): Statement {
         var nodes = convertToNodes(tokens)
         nodes = removeBraces(nodes)
         var level = 2
@@ -44,13 +61,18 @@ class Function(val name: String, val params: List<String>) {
                 level--
             }
         }
-
-        //printNodes(nodes)
+        return Statement(nodes)
     }
 
     private fun parseVarDefinition(tokens: List<Token>, start: Int): Int {
-        TODO()
-        return start
+        if (tokens[start + 1].tokenType != TokenType.SYMBOL) {
+            unexpectedTokenError(tokens[start + 1])
+        }
+        if (tokens[start + 2].tokenType != TokenType.END) {
+            unexpectedTokenError(tokens[start + 2])
+        }
+        vars.add((tokens[start + 1] as Symbol).content)
+        return start + 3
     }
 
     data class WrapResult(

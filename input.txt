@@ -6,6 +6,8 @@ fun f1() {
 }
 
 fun main(x, y) {
+    var a;
+
     globalX = 1;
     a = x + y + 1;
     return a;

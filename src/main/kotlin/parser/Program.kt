@@ -86,8 +86,4 @@ class Program {
         return start + 2
     }
 
-    private fun unexpectedTokenError(token: Token) {
-        throw IllegalArgumentException("Unexpected token at line " + token.line + ", position " + token.position)
-    }
-
 }
