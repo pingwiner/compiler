@@ -1,0 +1,12 @@
+package org.pingwiner.compiler.parser
+
+sealed class ASTNode {
+    class Plus(val left: ASTNode, val right: ASTNode) : ASTNode()
+    class Minus(val left: ASTNode, val right: ASTNode) : ASTNode()
+    class Multiply(val left: ASTNode, val right: ASTNode) : ASTNode()
+    class Divide(val left: ASTNode, val right: ASTNode) : ASTNode()
+    class ImmediateValue(val value: Int) : ASTNode()
+    class Variable(val name: String): ASTNode()
+    class FunctionCall(val name: String, arguments: List<ASTNode>): ASTNode()
+    class Return(val expression: ASTNode) : ASTNode()
+}
