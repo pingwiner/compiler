@@ -1,7 +1,5 @@
 package org.pingwiner.compiler
 
-import org.pingwiner.compiler.parser.Stack
-
 enum class TokenType {
     NUMBER,
     SYMBOL,
@@ -16,13 +14,9 @@ enum class TokenType {
 }
 
 enum class KeywordType(val value: String) {
-    VAR("var"),
-    RETURN("return"),
+    RESULT("result"),
     FUN("fun"),
-    IF("if"),
-    ELSE("else"),
-    WHILE("while"),
-    REPEAT("repeat")
+    VAR("var")
 }
 
 enum class OperatorType {
@@ -30,7 +24,7 @@ enum class OperatorType {
     MINUS,
     MULTIPLY,
     DIVIDE,
-    EQUALS
+    ASSIGN
 }
 
 open class Token(val tokenType: TokenType, val line: Int, val position: Int) {

@@ -72,7 +72,7 @@ class Program {
         }
 
         val function = Function(functionName, argNames)
-        function.parse(tokens.subList(i + 1, functionEndPosition))
+        function.parse(tokens.subList(i + 1, functionEndPosition), globalVars)
         functions.add(function)
         return functionEndPosition + 1
     }
@@ -82,7 +82,12 @@ class Program {
             throw IllegalArgumentException("Variable name expected at line " + tokens[start].line + ", position " + tokens[start].position + 4)
         }
         val varName = (tokens[start + 1] as Symbol).content
-        globalVars.add(varName)
+        if (!globalVars.contains(varName)) {
+            globalVars.add(varName)
+        } else {
+            throw IllegalArgumentException("Variable redefinition: $varName at line " + tokens[start + 1].line + ", position " + tokens[start + 1].position)
+        }
+
         return start + 2
     }
 

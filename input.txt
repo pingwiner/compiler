@@ -2,13 +2,11 @@
 var globalX;
 
 fun f1() {
-    return 0
+    result = 0
 }
 
 fun main(x, y) {
-    var a;
-
     globalX = 1;
     a = x + y + 1;
-    return a;
+    result = a;
 }

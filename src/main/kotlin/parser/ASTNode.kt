@@ -5,8 +5,9 @@ sealed class ASTNode {
     class Minus(val left: ASTNode, val right: ASTNode) : ASTNode()
     class Multiply(val left: ASTNode, val right: ASTNode) : ASTNode()
     class Divide(val left: ASTNode, val right: ASTNode) : ASTNode()
+    class Assign(val left: ASTNode, val right: ASTNode) : ASTNode()
     class ImmediateValue(val value: Int) : ASTNode()
     class Variable(val name: String): ASTNode()
+    class Result(): ASTNode()
     class FunctionCall(val name: String, arguments: List<ASTNode>): ASTNode()
-    class Return(val expression: ASTNode) : ASTNode()
 }

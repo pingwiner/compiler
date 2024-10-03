@@ -105,7 +105,7 @@ class Lexer {
             '-' -> Operator(OperatorType.MINUS, line, position)
             '*' -> Operator(OperatorType.MULTIPLY, line, position)
             '/' -> Operator(OperatorType.DIVIDE, line, position)
-            else -> Operator(OperatorType.EQUALS, line, position)
+            else -> Operator(OperatorType.ASSIGN, line, position)
         }
     }
 

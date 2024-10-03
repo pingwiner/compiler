@@ -1,11 +1,10 @@
 package org.pingwiner.compiler.parser
 
-import org.pingwiner.compiler.OperatorType
-import org.pingwiner.compiler.Token
-import org.pingwiner.compiler.TokenType
+import org.pingwiner.compiler.*
+import org.pingwiner.compiler.Number
 
 val operatorPriorityMap = mapOf(
-    OperatorType.EQUALS to 0,
+    OperatorType.ASSIGN to 0,
     OperatorType.PLUS to 1,
     OperatorType.MINUS to 1,
     OperatorType.MULTIPLY to 2,
@@ -108,3 +107,5 @@ fun findLastBrace(tokens: List<Token>, start: Int): Int {
 fun unexpectedTokenError(token: Token) {
     throw IllegalArgumentException("Unexpected token at line " + token.line + ", position " + token.position)
 }
+
+
