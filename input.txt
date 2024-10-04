@@ -1,12 +1,12 @@
 
 var globalX;
 
-fun f1() {
-    result = 0
+fun f1(x, y) {
+    result = x + y;
 }
 
-fun main(x, y) {
+fun main() {
     globalX = 1;
-    a = x + y + 1;
+    a = f1(2, globalX + 1);
     result = a;
 }

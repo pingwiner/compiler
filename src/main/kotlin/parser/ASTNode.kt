@@ -9,5 +9,5 @@ sealed class ASTNode {
     class ImmediateValue(val value: Int) : ASTNode()
     class Variable(val name: String): ASTNode()
     class Result(): ASTNode()
-    class FunctionCall(val name: String, arguments: List<ASTNode>): ASTNode()
+    class FunctionCall(val name: String, val arguments: List<ASTNode>): ASTNode()
 }

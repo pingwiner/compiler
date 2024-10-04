@@ -66,7 +66,7 @@ class Program {
             throw IllegalArgumentException("Function body expected " + tokens[i].at())
         }
 
-        val functionEndPosition = findLastBrace(tokens, i)
+        val functionEndPosition = findLastCurlBrace(tokens, i)
         if (functionEndPosition == -1) {
             throw IllegalArgumentException("Missing } for function $functionName")
         }

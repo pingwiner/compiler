@@ -28,8 +28,13 @@ class Function(val name: String, val params: List<String>) {
     }
 
     private fun parseStatement(tokens: List<Token>): Statement {
-        var nodes = convertToNodes(tokens)
+        return parseStatementNodes(convertToNodes(tokens))
+    }
+
+    private fun parseStatementNodes(inputNodes: List<Node>): Statement {
+        var nodes = wrapFunctionCalls(inputNodes)
         nodes = removeBraces(nodes)
+
         var level = 2
         while (level >= 0) {
             val wrapResult = wrapTokensWithPriority(nodes, level)
@@ -39,6 +44,23 @@ class Function(val name: String, val params: List<String>) {
             }
         }
         return Statement(nodesToAst(nodes))
+    }
+
+    private fun wrapFunctionCalls(nodes: List<Node>): List<Node>  {
+        var i = 0
+        val result = mutableListOf<Node>()
+        while (i < nodes.size) {
+            if (nodes[i].value?.tokenType == TokenType.L_BRACE) {
+                val j = findLastBrace(nodes, i)
+                result.last().subNodes = nodes.subList(i + 1, j)
+                result.last().isFunction = true
+                i = j + 1
+            } else {
+                result.add(nodes[i])
+                i += 1
+            }
+        }
+        return result
     }
 
     data class WrapResult(
@@ -102,14 +124,19 @@ class Function(val name: String, val params: List<String>) {
             TokenType.NUMBER -> ASTNode.ImmediateValue((node.value as Number).value)
             TokenType.SYMBOL -> {
                 val varName = (node.value as Symbol).content
-                if (!globalVars.contains(varName)) {
-                    if (!params.contains(varName)) {
-                        if (!vars.contains(varName)) {
-                            vars.add(varName)
+                if (!node.isFunction) {
+                    if (!globalVars.contains(varName)) {
+                        if (!params.contains(varName)) {
+                            if (!vars.contains(varName)) {
+                                vars.add(varName)
+                            }
                         }
                     }
+                    ASTNode.Variable(varName)
+                } else {
+                    val arguments = parseFunctionArguments(node.subNodes ?: listOf())
+                    ASTNode.FunctionCall(varName, arguments)
                 }
-                ASTNode.Variable(varName)
             }
             TokenType.KEYWORD -> {
                 if ((node.value as Keyword).type == KeywordType.RESULT) {
@@ -127,6 +154,22 @@ class Function(val name: String, val params: List<String>) {
             }
             else -> { throw IllegalArgumentException("Syntax error " + node.value?.at())}
         }
+    }
+
+    private fun parseFunctionArguments(nodes: List<Node>): List<ASTNode> {
+        val result = mutableListOf<ASTNode>()
+        if (nodes.isEmpty()) return result
+        var i = 0
+        while (i < nodes.size) {
+            var j = findNextComma(nodes, i)
+            if (j == -1) {
+                j = nodes.size
+            }
+            val statement = parseStatementNodes(nodes.subList(i, j))
+            result.add(statement.node)
+            i = j + 1
+        }
+        return result
     }
 
     private fun nodeToAstNode(node: Node, left: ASTNode, right: ASTNode): ASTNode {

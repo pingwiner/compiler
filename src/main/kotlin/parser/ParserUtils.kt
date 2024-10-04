@@ -88,7 +88,7 @@ fun convertToNodes(tokens: List<Token>): List<Node> {
     return nodes
 }
 
-fun findLastBrace(tokens: List<Token>, start: Int): Int {
+fun findLastCurlBrace(tokens: List<Token>, start: Int): Int {
     val stack = Stack<Int>()
     var i = start
     while (i < tokens.size) {
@@ -100,6 +100,39 @@ fun findLastBrace(tokens: List<Token>, start: Int): Int {
             if (stack.isEmpty()) return i
         }
         i++
+    }
+    return -1
+}
+
+fun findLastBrace(nodes: List<Node>, start: Int): Int {
+    val stack = Stack<Int>()
+    var i = start
+    while (i < nodes.size) {
+        if (nodes[i].value?.tokenType == TokenType.L_BRACE) {
+            stack.push(1)
+        }
+        if (nodes[i].value?.tokenType == TokenType.R_BRACE) {
+            stack.pop()
+            if (stack.isEmpty()) return i
+        }
+        i++
+    }
+    return -1
+}
+
+fun findNextComma(nodes: List<Node>, start: Int): Int {
+    val stack = Stack<Int>()
+    var i = start
+    while (i < nodes.size) {
+        when (nodes[i].value?.tokenType) {
+            TokenType.L_BRACE -> stack.push(1)
+            TokenType.R_BRACE -> stack.pop()
+            TokenType.COMMA -> {
+                if (stack.isEmpty()) return i
+            }
+            else -> {}
+        }
+        i += 1
     }
     return -1
 }
