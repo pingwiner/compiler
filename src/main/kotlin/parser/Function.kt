@@ -90,10 +90,10 @@ class Function(val name: String, val params: List<String>) {
                 val right = nodeToAstNode(nodes[2])
                 return nodeToAstNode(nodes[1], left, right)
             } else {
-                throw IllegalArgumentException()
+                throw IllegalArgumentException("Unexpected token " + nodes[1].value?.at())
             }
         } else {
-            throw IllegalArgumentException()
+            throw IllegalArgumentException("Syntax error " + nodes[0].value?.at())
         }
     }
 
@@ -115,17 +115,17 @@ class Function(val name: String, val params: List<String>) {
                 if ((node.value as Keyword).type == KeywordType.RESULT) {
                     ASTNode.Result()
                 } else {
-                    throw IllegalArgumentException()
+                    throw IllegalArgumentException("Syntax error " + node.value?.at())
                 }
             }
             null -> {
                 if (node.subNodes != null) {
                     nodesToAst(node.subNodes!!)
                 } else {
-                    throw IllegalArgumentException()
+                    throw IllegalArgumentException("Bad token " + node.value?.at())
                 }
             }
-            else -> { throw IllegalArgumentException()}
+            else -> { throw IllegalArgumentException("Syntax error " + node.value?.at())}
         }
     }
 
@@ -140,7 +140,7 @@ class Function(val name: String, val params: List<String>) {
                 if (left is ASTNode.Variable || left is ASTNode.Result) {
                     ASTNode.Assign(left, right)
                 } else {
-                    throw IllegalArgumentException()
+                    throw IllegalArgumentException("Illegal assignment " + node.value?.at())
                 }
             }
         }

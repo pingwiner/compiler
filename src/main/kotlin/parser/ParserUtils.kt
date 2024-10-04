@@ -105,7 +105,7 @@ fun findLastBrace(tokens: List<Token>, start: Int): Int {
 }
 
 fun unexpectedTokenError(token: Token) {
-    throw IllegalArgumentException("Unexpected token at line " + token.line + ", position " + token.position)
+    throw IllegalArgumentException("Unexpected token at line " + token.at())
 }
 
 

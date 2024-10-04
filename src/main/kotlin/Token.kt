@@ -31,6 +31,10 @@ open class Token(val tokenType: TokenType, val line: Int, val position: Int) {
     override fun toString(): String {
         return "Token($tokenType)"
     }
+
+    fun at(offset: Int = 0): String {
+        return "at line $line, position ${position + offset}"
+    }
 }
 
 class Symbol(val content: String, line: Int, position: Int) : Token(TokenType.SYMBOL, line, position) {

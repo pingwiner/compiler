@@ -37,12 +37,12 @@ class Program {
 
     private fun parseFunction(tokens: List<Token>, start: Int): Int {
         if ((tokens.size < start + 2) || (tokens[start + 1] !is Symbol)) {
-            throw IllegalArgumentException("Function name expected at line " + tokens[start].line + ", position " + tokens[start].position + 4)
+            throw IllegalArgumentException("Function name expected " + tokens[start].at(4))
         }
         val functionName = (tokens[start + 1] as Symbol).content
 
         if (tokens[start + 2].tokenType != TokenType.L_BRACE) {
-            throw IllegalArgumentException("Function parameters expected at line " + tokens[start + 2].line + ", position " + tokens[start + 2].position)
+            throw IllegalArgumentException("Function parameters expected " + tokens[start + 2].at())
         }
 
         var i = start + 3
@@ -63,7 +63,7 @@ class Program {
         i++
 
         if (tokens[i].tokenType != TokenType.L_CURL) {
-            throw IllegalArgumentException("Function body expected at line " + tokens[i].line + ", position " + tokens[i].position)
+            throw IllegalArgumentException("Function body expected " + tokens[i].at())
         }
 
         val functionEndPosition = findLastBrace(tokens, i)
@@ -79,13 +79,13 @@ class Program {
 
     private fun parseVar(tokens: List<Token>, start: Int): Int {
         if ((tokens.size < start + 2) || (tokens[start + 1] !is Symbol)) {
-            throw IllegalArgumentException("Variable name expected at line " + tokens[start].line + ", position " + tokens[start].position + 4)
+            throw IllegalArgumentException("Variable name expected " + tokens[start].at(4))
         }
         val varName = (tokens[start + 1] as Symbol).content
         if (!globalVars.contains(varName)) {
             globalVars.add(varName)
         } else {
-            throw IllegalArgumentException("Variable redefinition: $varName at line " + tokens[start + 1].line + ", position " + tokens[start + 1].position)
+            throw IllegalArgumentException("Variable redefinition: $varName " + tokens[start + 1].at())
         }
 
         return start + 2
