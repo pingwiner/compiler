@@ -19,12 +19,18 @@ enum class KeywordType(val value: String) {
     VAR("var")
 }
 
-enum class OperatorType {
-    PLUS,
-    MINUS,
-    MULTIPLY,
-    DIVIDE,
-    ASSIGN
+enum class OperatorType(val value: String) {
+    PLUS("+"),
+    MINUS("-"),
+    MULTIPLY("*"),
+    DIVIDE("/"),
+    ASSIGN("="),
+    IF("?"),
+    EQ("=="),
+    LT("<"),
+    GT(">"),
+    GTEQ(">="),
+    LTEQ("<=")
 }
 
 open class Token(val tokenType: TokenType, val line: Int, val position: Int) {

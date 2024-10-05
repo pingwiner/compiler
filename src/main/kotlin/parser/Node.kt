@@ -14,4 +14,8 @@ class Node() {
     constructor(nodes: List<Node>) : this() {
         subNodes = nodes
     }
+
+    override fun toString(): String {
+        return "value: " + value?.toString() + ", " + if (subNodes != null) printNodes(subNodes!!) else ""
+    }
 }

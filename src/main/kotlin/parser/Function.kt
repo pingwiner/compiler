@@ -35,7 +35,7 @@ class Function(val name: String, val params: List<String>) {
         var nodes = wrapFunctionCalls(inputNodes)
         nodes = removeBraces(nodes)
 
-        var level = 2
+        var level = maxPriorityLevel
         while (level >= 0) {
             val wrapResult = wrapTokensWithPriority(nodes, level)
             nodes = wrapResult.nodes
@@ -50,7 +50,7 @@ class Function(val name: String, val params: List<String>) {
         var i = 0
         val result = mutableListOf<Node>()
         while (i < nodes.size) {
-            if (nodes[i].value?.tokenType == TokenType.L_BRACE) {
+            if (nodes[i].value?.tokenType == TokenType.L_BRACE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
                 val j = findLastBrace(nodes, i)
                 result.last().subNodes = nodes.subList(i + 1, j)
                 result.last().isFunction = true
@@ -115,7 +115,7 @@ class Function(val name: String, val params: List<String>) {
                 throw IllegalArgumentException("Unexpected token " + nodes[1].value?.at())
             }
         } else {
-            throw IllegalArgumentException("Syntax error " + nodes[0].value?.at())
+            throw IllegalArgumentException("Syntax error at node " + nodes[0].toString())
         }
     }
 
@@ -186,6 +186,12 @@ class Function(val name: String, val params: List<String>) {
                     throw IllegalArgumentException("Illegal assignment " + node.value?.at())
                 }
             }
+            OperatorType.IF -> ASTNode.If(left, right)
+            OperatorType.EQ -> ASTNode.Eq(left, right)
+            OperatorType.LT -> ASTNode.Lt(left, right)
+            OperatorType.GT -> ASTNode.Gt(left, right)
+            OperatorType.GTEQ -> ASTNode.GtEq(left, right)
+            OperatorType.LTEQ -> ASTNode.LtEq(left, right)
         }
     }
 

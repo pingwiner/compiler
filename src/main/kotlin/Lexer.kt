@@ -3,12 +3,13 @@ package org.pingwiner.compiler
 enum class State {
     SPACE,
     NUMBER,
-    VAR_NAME
+    VAR_NAME,
+    OPERATOR
 }
 
 const val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 const val digits = "0123456789"
-const val ops = "+-*/="
+const val ops = "+-*/=<>?"
 
 fun Char.isLetter(): Boolean {
     return letters.contains(this)
@@ -35,6 +36,7 @@ class Lexer {
                 State.SPACE -> space(c)
                 State.NUMBER -> number(c)
                 State.VAR_NAME -> word(c)
+                State.OPERATOR -> operator(c)
             }
             if (c == '\n') {
                 position = 1
@@ -55,7 +57,9 @@ class Lexer {
             currentToken.append(c)
             state = State.NUMBER
         } else if (c.isOp()) {
-            tokens.add(createOperator(c))
+            currentToken.clear()
+            currentToken.append(c)
+            state = State.OPERATOR
         } else if (c == '(') {
             tokens.add(Token(TokenType.L_BRACE, line, position))
         } else if (c == ')') {
@@ -99,13 +103,20 @@ class Lexer {
         }
     }
 
-    private fun createOperator(c: Char): Token {
-        return when(c){
-            '+' -> Operator(OperatorType.PLUS, line, position)
-            '-' -> Operator(OperatorType.MINUS, line, position)
-            '*' -> Operator(OperatorType.MULTIPLY, line, position)
-            '/' -> Operator(OperatorType.DIVIDE, line, position)
-            else -> Operator(OperatorType.ASSIGN, line, position)
+    private fun operator(c: Char) {
+        if (c.isOp()) {
+            currentToken.append(c)
+        } else {
+            val s = currentToken.toString()
+            val operator = parseOperator(s)
+            if (operator != null) {
+                tokens.add(operator)
+            } else {
+                throw IllegalArgumentException("Syntax error at line $line, position $position")
+            }
+            currentToken.clear()
+            state = State.SPACE
+            space(c)
         }
     }
 
@@ -118,6 +129,13 @@ class Lexer {
     private fun parseKeyword(s: String) : Keyword? {
         for (k in KeywordType.entries) {
             if (s == k.value) return Keyword(k, line, position - k.value.length)
+        }
+        return null
+    }
+
+    private fun parseOperator(s: String) : Operator? {
+        for (k in OperatorType.entries) {
+            if (s == k.value) return Operator(k, line, position - k.value.length)
         }
         return null
     }

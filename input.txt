@@ -8,5 +8,6 @@ fun f1(x, y) {
 fun main() {
     globalX = 1;
     a = f1(2, globalX + 1);
+    (a == 2) ? a;
     result = a;
 }

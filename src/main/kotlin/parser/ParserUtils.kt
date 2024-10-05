@@ -1,14 +1,21 @@
 package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
-import org.pingwiner.compiler.Number
+
+const val maxPriorityLevel = 5
 
 val operatorPriorityMap = mapOf(
     OperatorType.ASSIGN to 0,
-    OperatorType.PLUS to 1,
-    OperatorType.MINUS to 1,
-    OperatorType.MULTIPLY to 2,
-    OperatorType.DIVIDE to 2
+    OperatorType.IF to 1,
+    OperatorType.EQ to 2,
+    OperatorType.LT to 3,
+    OperatorType.GT to 3,
+    OperatorType.GTEQ to 3,
+    OperatorType.LTEQ to 3,
+    OperatorType.PLUS to 4,
+    OperatorType.MINUS to 4,
+    OperatorType.MULTIPLY to 5,
+    OperatorType.DIVIDE to 5
 )
 
 fun removeBraces(nodes: List<Node>): List<Node> {
@@ -63,21 +70,26 @@ private fun findRBrace(nodes: List<Node>, start: Int): Int {
     return -1
 }
 
-private fun printNodes(nodes: List<Node>, level: Int = 0) {
+fun printNodes(nodes: List<Node>, level: Int = 0): String {
     var padding = ""
+    val sb = StringBuilder()
     for (i in 0..level) {
         padding += "  "
     }
     for (n in nodes) {
         n.value?.let {
-            println(padding + it)
+            //println(padding + it)
+            sb.append(padding + it)
         }
         n.subNodes?.let {
-            println("$padding{")
-            printNodes(it, level + 1)
-            println("$padding}")
+            //println("$padding{")
+            sb.append("$padding{")
+            sb.append(printNodes(it, level + 1))
+            //println("$padding}")
+            sb.append("$padding}")
         }
     }
+    return sb.toString()
 }
 
 fun convertToNodes(tokens: List<Token>): List<Node> {
