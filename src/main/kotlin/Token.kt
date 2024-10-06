@@ -26,6 +26,7 @@ enum class OperatorType(val value: String) {
     DIVIDE("/"),
     ASSIGN("="),
     IF("?"),
+    ELSE(":"),
     EQ("=="),
     LT("<"),
     GT(">"),

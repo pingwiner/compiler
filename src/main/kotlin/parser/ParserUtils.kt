@@ -7,15 +7,16 @@ const val maxPriorityLevel = 5
 val operatorPriorityMap = mapOf(
     OperatorType.ASSIGN to 0,
     OperatorType.IF to 1,
-    OperatorType.EQ to 2,
-    OperatorType.LT to 3,
-    OperatorType.GT to 3,
-    OperatorType.GTEQ to 3,
-    OperatorType.LTEQ to 3,
-    OperatorType.PLUS to 4,
-    OperatorType.MINUS to 4,
-    OperatorType.MULTIPLY to 5,
-    OperatorType.DIVIDE to 5
+    OperatorType.ELSE to 2,
+    OperatorType.EQ to 3,
+    OperatorType.LT to 4,
+    OperatorType.GT to 4,
+    OperatorType.GTEQ to 4,
+    OperatorType.LTEQ to 4,
+    OperatorType.PLUS to 5,
+    OperatorType.MINUS to 5,
+    OperatorType.MULTIPLY to 6,
+    OperatorType.DIVIDE to 6
 )
 
 fun removeBraces(nodes: List<Node>): List<Node> {

@@ -8,6 +8,19 @@ class Function(val name: String, val params: List<String>) {
     val vars = mutableListOf<String>()
     val statements = mutableListOf<Statement>()
 
+    override fun toString(): String {
+        val sb = StringBuilder()
+        var i = 0
+        for (arg in params) {
+            sb.append(arg)
+            i += 1
+            if (i < params.size) {
+                sb.append(", ")
+            }
+        }
+        return "$name($sb)"
+    }
+
     open class Statement(
         val node: ASTNode
     )
@@ -192,6 +205,7 @@ class Function(val name: String, val params: List<String>) {
             OperatorType.GT -> ASTNode.Gt(left, right)
             OperatorType.GTEQ -> ASTNode.GtEq(left, right)
             OperatorType.LTEQ -> ASTNode.LtEq(left, right)
+            OperatorType.ELSE -> ASTNode.Else(left, right)
         }
     }
 

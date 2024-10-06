@@ -1,19 +1,93 @@
 package org.pingwiner.compiler.parser
 
 sealed class ASTNode {
-    class Plus(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Minus(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Multiply(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Divide(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Assign(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class If(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Eq(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Lt(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class Gt(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class GtEq(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class LtEq(val left: ASTNode, val right: ASTNode) : ASTNode()
-    class ImmediateValue(val value: Int) : ASTNode()
-    class Variable(val name: String): ASTNode()
-    class Result(): ASTNode()
-    class FunctionCall(val name: String, val arguments: List<ASTNode>): ASTNode()
+    class Plus(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left + $right"
+        }
+    }
+    class Minus(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left - $right"
+        }
+    }
+    class Multiply(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left * $right"
+        }
+    }
+    class Divide(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left / $right"
+        }
+    }
+    class Assign(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left = $right"
+        }
+    }
+    class If(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left ? $right"
+        }
+    }
+    class Else(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left : $right"
+        }
+    }
+    class Eq(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "($left == $right)"
+        }
+    }
+    class Lt(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left <= $right"
+        }
+    }
+    class Gt(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left > $right"
+        }
+    }
+    class GtEq(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left >= $right"
+        }
+    }
+    class LtEq(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left <= $right"
+        }
+    }
+    class ImmediateValue(val value: Int) : ASTNode() {
+        override fun toString(): String {
+            return "$value"
+        }
+    }
+    class Variable(val name: String): ASTNode() {
+        override fun toString(): String {
+            return name
+        }
+    }
+    class Result(): ASTNode() {
+        override fun toString(): String {
+            return "result"
+        }
+    }
+    class FunctionCall(val name: String, val arguments: List<ASTNode>): ASTNode() {
+        override fun toString(): String {
+            val sb = StringBuilder()
+            var i = 0
+            for (arg in arguments) {
+                sb.append(arg.toString())
+                i += 1
+                if (i < arguments.size) {
+                    sb.append(", ")
+                }
+            }
+            return "$name($sb)"
+        }
+    }
 }
