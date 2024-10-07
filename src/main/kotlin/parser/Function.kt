@@ -206,6 +206,9 @@ class Function(val name: String, val params: List<String>) {
             OperatorType.GTEQ -> ASTNode.GtEq(left, right)
             OperatorType.LTEQ -> ASTNode.LtEq(left, right)
             OperatorType.ELSE -> ASTNode.Else(left, right)
+            OperatorType.WHILE -> ASTNode.While(left, right)
+            OperatorType.REPEAT -> ASTNode.Repeat(left, right)
+            OperatorType.UNTIL -> ASTNode.Until(left, right)
         }
     }
 

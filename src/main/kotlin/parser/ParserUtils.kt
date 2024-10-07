@@ -7,6 +7,9 @@ const val maxPriorityLevel = 5
 val operatorPriorityMap = mapOf(
     OperatorType.ASSIGN to 0,
     OperatorType.IF to 1,
+    OperatorType.WHILE to 1,
+    OperatorType.REPEAT to 1,
+    OperatorType.UNTIL to 1,
     OperatorType.ELSE to 2,
     OperatorType.EQ to 3,
     OperatorType.LT to 4,

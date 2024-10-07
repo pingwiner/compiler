@@ -31,7 +31,10 @@ enum class OperatorType(val value: String) {
     LT("<"),
     GT(">"),
     GTEQ(">="),
-    LTEQ("<=")
+    LTEQ("<="),
+    WHILE("while"),
+    REPEAT("repeat"),
+    UNTIL("until")
 }
 
 open class Token(val tokenType: TokenType, val line: Int, val position: Int) {

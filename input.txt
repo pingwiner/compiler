@@ -7,6 +7,9 @@ fun f1(x, y) {
 
 fun main() {
     globalX = 1;
-    a = (a == 2) ? f1(2, globalX + 1) : 1;
+    b = (a == 2) ? (a = a - 1) : (a = a + 1);
+    (a = a + 1) while(a > 0);
+    (a = a - 1) repeat(3);
+    (a = a * 2) until(a < 1000);
     result = a;
 }

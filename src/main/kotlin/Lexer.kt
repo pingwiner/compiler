@@ -91,8 +91,11 @@ class Lexer {
             currentToken.append(c)
         } else {
             val s = currentToken.toString()
+            val operator = parseOperator(s)
             val keyword = parseKeyword(s)
-            if (keyword != null) {
+            if (operator != null) {
+                tokens.add(operator)
+            } else if (keyword != null) {
                 tokens.add(keyword)
             } else {
                 tokens.add(Symbol(s, line, position - s.length))

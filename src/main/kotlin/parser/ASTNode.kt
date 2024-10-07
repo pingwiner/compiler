@@ -43,7 +43,7 @@ sealed class ASTNode {
     }
     class Lt(val left: ASTNode, val right: ASTNode) : ASTNode() {
         override fun toString(): String {
-            return "$left <= $right"
+            return "$left < $right"
         }
     }
     class Gt(val left: ASTNode, val right: ASTNode) : ASTNode() {
@@ -88,6 +88,21 @@ sealed class ASTNode {
                 }
             }
             return "$name($sb)"
+        }
+    }
+    class While(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left while($right)"
+        }
+    }
+    class Repeat(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left repeat($right)"
+        }
+    }
+    class Until(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left until($right)"
         }
     }
 }
