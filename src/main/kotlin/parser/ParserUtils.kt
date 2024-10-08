@@ -11,15 +11,24 @@ val operatorPriorityMap = mapOf(
     OperatorType.REPEAT to 1,
     OperatorType.UNTIL to 1,
     OperatorType.ELSE to 2,
-    OperatorType.EQ to 3,
-    OperatorType.LT to 4,
-    OperatorType.GT to 4,
-    OperatorType.GTEQ to 4,
-    OperatorType.LTEQ to 4,
-    OperatorType.PLUS to 5,
-    OperatorType.MINUS to 5,
-    OperatorType.MULTIPLY to 6,
-    OperatorType.DIVIDE to 6
+    OperatorType.ORL to 3,
+    OperatorType.ANDL to 4,
+    OperatorType.ORB to 5,
+    OperatorType.XOR to 6,
+    OperatorType.ANDB to 6,
+    OperatorType.EQ to 7,
+    OperatorType.NEQ to 7,
+    OperatorType.LT to 8,
+    OperatorType.GT to 8,
+    OperatorType.GTEQ to 8,
+    OperatorType.LTEQ to 8,
+    OperatorType.LTEQ to 8,
+    OperatorType.SHL to 9,
+    OperatorType.SHR to 9,
+    OperatorType.PLUS to 10,
+    OperatorType.MINUS to 10,
+    OperatorType.MULTIPLY to 11,
+    OperatorType.DIVIDE to 11
 )
 
 fun removeBraces(nodes: List<Node>): List<Node> {

@@ -11,5 +11,6 @@ fun main() {
     (a = a + 1) while(a > 0);
     (a = a - 1) repeat(3);
     (a = a * 2) until(a < 1000);
+    a = 2 && 4;
     result = a;
 }

@@ -9,7 +9,7 @@ enum class State {
 
 const val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 const val digits = "0123456789"
-const val ops = "+-*/=<>?:"
+const val ops = "+-*/=<>?:&|%^!"
 
 fun Char.isLetter(): Boolean {
     return letters.contains(this)

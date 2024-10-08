@@ -201,6 +201,7 @@ class Function(val name: String, val params: List<String>) {
             }
             OperatorType.IF -> ASTNode.If(left, right)
             OperatorType.EQ -> ASTNode.Eq(left, right)
+            OperatorType.NEQ -> ASTNode.Neq(left, right)
             OperatorType.LT -> ASTNode.Lt(left, right)
             OperatorType.GT -> ASTNode.Gt(left, right)
             OperatorType.GTEQ -> ASTNode.GtEq(left, right)
@@ -209,6 +210,14 @@ class Function(val name: String, val params: List<String>) {
             OperatorType.WHILE -> ASTNode.While(left, right)
             OperatorType.REPEAT -> ASTNode.Repeat(left, right)
             OperatorType.UNTIL -> ASTNode.Until(left, right)
+            OperatorType.SHR -> ASTNode.Shr(left, right)
+            OperatorType.SHL -> ASTNode.Shl(left, right)
+            OperatorType.ORB -> ASTNode.OrB(left, right)
+            OperatorType.ORL -> ASTNode.OrL(left, right)
+            OperatorType.ANDB -> ASTNode.AndB(left, right)
+            OperatorType.ANDL -> ASTNode.AndL(left, right)
+            OperatorType.XOR -> ASTNode.Xor(left, right)
+            OperatorType.MOD -> ASTNode.Mod(left, right)
         }
     }
 

@@ -105,4 +105,59 @@ sealed class ASTNode {
             return "$left until($right)"
         }
     }
+
+    class Neq(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left != $right"
+        }
+    }
+
+    class Shr(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left >> $right"
+        }
+    }
+
+    class Shl(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left << $right"
+        }
+    }
+
+    class OrB(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left | $right"
+        }
+    }
+
+    class OrL(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left || $right"
+        }
+    }
+
+    class AndB(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left & $right"
+        }
+    }
+
+    class AndL(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left && $right"
+        }
+    }
+
+    class Xor(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left ^ $right"
+        }
+    }
+
+    class Mod(val left: ASTNode, val right: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "$left % $right"
+        }
+    }
+
 }
