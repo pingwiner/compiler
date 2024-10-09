@@ -1,81 +1,57 @@
 package org.pingwiner.compiler.parser
 
-sealed class ASTNode {
-    class Plus(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left + $right"
-        }
+sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, private val operation: String = "") {
+
+    override fun toString(): String {
+        return "$left $operation $right"
     }
-    class Minus(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left - $right"
-        }
-    }
-    class Multiply(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left * $right"
-        }
-    }
-    class Divide(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left / $right"
-        }
-    }
-    class Assign(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left = $right"
-        }
-    }
-    class If(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left ? $right"
-        }
-    }
-    class Else(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left : $right"
-        }
-    }
-    class Eq(val left: ASTNode, val right: ASTNode) : ASTNode() {
+
+    class Plus(left: ASTNode, right: ASTNode) : ASTNode(left, right, "+")
+
+    class Minus(left: ASTNode, right: ASTNode) : ASTNode(left, right, "-")
+
+    class Multiply(left: ASTNode, right: ASTNode) : ASTNode(left, right, "*")
+
+    class Divide(left: ASTNode, right: ASTNode) : ASTNode(left, right, "/")
+
+    class Assign(left: ASTNode, right: ASTNode) : ASTNode(left, right, "=")
+
+    class If(left: ASTNode, right: ASTNode) : ASTNode(left, right, "?")
+
+    class Else(left: ASTNode, right: ASTNode) : ASTNode(left, right, ":")
+
+    class Eq(left: ASTNode, right: ASTNode) : ASTNode(left, right, "==") {
         override fun toString(): String {
             return "($left == $right)"
         }
     }
-    class Lt(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left < $right"
-        }
-    }
-    class Gt(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left > $right"
-        }
-    }
-    class GtEq(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left >= $right"
-        }
-    }
-    class LtEq(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left <= $right"
-        }
-    }
+
+    class Lt(left: ASTNode, right: ASTNode) : ASTNode(left, right, "<")
+
+    class Gt(left: ASTNode, right: ASTNode) : ASTNode(left, right, ">")
+
+    class GtEq(left: ASTNode, right: ASTNode) : ASTNode(left, right, ">=")
+
+    class LtEq(left: ASTNode, right: ASTNode) : ASTNode(left, right, "<=")
+
     class ImmediateValue(val value: Int) : ASTNode() {
         override fun toString(): String {
             return "$value"
         }
     }
+
     class Variable(val name: String): ASTNode() {
         override fun toString(): String {
             return name
         }
     }
-    class Result(): ASTNode() {
+
+    class Result: ASTNode() {
         override fun toString(): String {
             return "result"
         }
     }
+
     class FunctionCall(val name: String, val arguments: List<ASTNode>): ASTNode() {
         override fun toString(): String {
             val sb = StringBuilder()
@@ -90,74 +66,40 @@ sealed class ASTNode {
             return "$name($sb)"
         }
     }
-    class While(val left: ASTNode, val right: ASTNode) : ASTNode() {
+
+    class While(left: ASTNode, right: ASTNode) : ASTNode(left, right) {
         override fun toString(): String {
             return "$left while($right)"
         }
     }
-    class Repeat(val left: ASTNode, val right: ASTNode) : ASTNode() {
+
+    class Repeat(left: ASTNode, right: ASTNode) : ASTNode(left, right) {
         override fun toString(): String {
             return "$left repeat($right)"
         }
     }
-    class Until(val left: ASTNode, val right: ASTNode) : ASTNode() {
+
+    class Until(left: ASTNode, right: ASTNode) : ASTNode(left, right) {
         override fun toString(): String {
             return "$left until($right)"
         }
     }
 
-    class Neq(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left != $right"
-        }
-    }
+    class Neq(left: ASTNode, right: ASTNode) : ASTNode(left, right, "!=")
 
-    class Shr(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left >> $right"
-        }
-    }
+    class Shr(left: ASTNode, right: ASTNode) : ASTNode(left, right, ">>")
 
-    class Shl(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left << $right"
-        }
-    }
+    class Shl(left: ASTNode, right: ASTNode) : ASTNode(left, right, "<<")
 
-    class OrB(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left | $right"
-        }
-    }
+    class OrB(left: ASTNode, right: ASTNode) : ASTNode(left, right, "|")
 
-    class OrL(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left || $right"
-        }
-    }
+    class OrL(left: ASTNode, right: ASTNode) : ASTNode(left, right, "||")
 
-    class AndB(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left & $right"
-        }
-    }
+    class AndB(left: ASTNode, right: ASTNode) : ASTNode(left, right, "&")
 
-    class AndL(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left && $right"
-        }
-    }
+    class AndL(left: ASTNode, right: ASTNode) : ASTNode(left, right, "&&")
 
-    class Xor(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left ^ $right"
-        }
-    }
+    class Xor(left: ASTNode, right: ASTNode) : ASTNode(left, right, "^")
 
-    class Mod(val left: ASTNode, val right: ASTNode) : ASTNode() {
-        override fun toString(): String {
-            return "$left % $right"
-        }
-    }
-
+    class Mod(left: ASTNode, right: ASTNode) : ASTNode(left, right, "%")
 }
