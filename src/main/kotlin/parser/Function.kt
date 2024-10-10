@@ -4,7 +4,7 @@ import org.pingwiner.compiler.*
 import org.pingwiner.compiler.Number
 
 class Function(val name: String, val params: List<String>) {
-    private var globalVars = listOf<String>()
+    private lateinit var context: ParserContext
     val vars = mutableListOf<String>()
     val statements = mutableListOf<Statement>()
 
@@ -25,8 +25,8 @@ class Function(val name: String, val params: List<String>) {
         val node: ASTNode
     )
 
-    fun parse(tokens: List<Token>, globalVars: List<String>) {
-        this.globalVars = globalVars
+    fun parse(tokens: List<Token>, context: ParserContext) {
+        this.context = context
         parseBlock(tokens)
     }
 
@@ -136,19 +136,20 @@ class Function(val name: String, val params: List<String>) {
         return when(node.value?.tokenType) {
             TokenType.NUMBER -> ASTNode.ImmediateValue((node.value as Number).value)
             TokenType.SYMBOL -> {
-                val varName = (node.value as Symbol).content
+                val name = (node.value as Symbol).content
                 if (!node.isFunction) {
-                    if (!globalVars.contains(varName)) {
-                        if (!params.contains(varName)) {
-                            if (!vars.contains(varName)) {
-                                vars.add(varName)
+                    if (!context.globalVars.contains(name)) {
+                        if (!params.contains(name)) {
+                            if (!vars.contains(name)) {
+                                vars.add(name)
                             }
                         }
                     }
-                    ASTNode.Variable(varName)
+                    ASTNode.Variable(name)
                 } else {
                     val arguments = parseFunctionArguments(node.subNodes ?: listOf())
-                    ASTNode.FunctionCall(varName, arguments)
+                    context.useFunction(name)
+                    ASTNode.FunctionCall(name, arguments)
                 }
             }
             TokenType.KEYWORD -> {

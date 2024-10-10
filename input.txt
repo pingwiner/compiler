@@ -6,8 +6,8 @@ fun f1(x, y) {
 }
 
 fun main() {
-    globalX = 1;
-    b = (a == 2) ? (a = a - 1) : (a = a + 1);
+    globalX = f1(2, 3);
+    b = (a == 2) ? (a = a - 1) : (a = a + f1(f2(4, 5), 2));
     (a = a + 1) while(a > 0);
     (a = a - 1) repeat(3);
     (a = a * 2) until(a < 1000);

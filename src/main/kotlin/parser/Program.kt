@@ -2,9 +2,18 @@ package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
 
-class Program {
+class Program : ParserContext {
     val functions = mutableListOf<Function>()
-    val globalVars = mutableListOf<String>()
+    override val globalVars = mutableListOf<String>()
+    val useFunc = mutableMapOf<String, Int>()
+
+    override fun useFunction(name: String) {
+        if (useFunc.contains(name)) {
+            useFunc[name] = useFunc[name]!!.plus(1)
+        } else {
+            useFunc[name] = 1
+        }
+    }
 
     fun parse(tokens: List<Token>) {
         var i = 0
@@ -31,6 +40,18 @@ class Program {
                         i++
                     }
                 }
+            }
+        }
+        for (f in useFunc.keys) {
+            var found = false
+            for (function in functions) {
+                if (function.name == f) {
+                    found = true
+                    break
+                }
+            }
+            if (!found) {
+                throw IllegalArgumentException("Function $f not defined")
             }
         }
     }
@@ -72,7 +93,7 @@ class Program {
         }
 
         val function = Function(functionName, argNames)
-        function.parse(tokens.subList(i + 1, functionEndPosition), globalVars)
+        function.parse(tokens.subList(i + 1, functionEndPosition), this)
         functions.add(function)
         return functionEndPosition + 1
     }
