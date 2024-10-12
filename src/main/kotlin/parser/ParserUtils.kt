@@ -2,8 +2,6 @@ package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
 
-const val maxPriorityLevel = 5
-
 val operatorPriorityMap = mapOf(
     OperatorType.ASSIGN to 0,
     OperatorType.IF to 1,
@@ -30,6 +28,8 @@ val operatorPriorityMap = mapOf(
     OperatorType.MULTIPLY to 11,
     OperatorType.DIVIDE to 11
 )
+
+val maxPriorityLevel = operatorPriorityMap.toList().maxByOrNull { (_, value) -> value }!!.second
 
 fun removeBraces(nodes: List<Node>): List<Node> {
     val result = mutableListOf<Node>()
