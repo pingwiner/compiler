@@ -116,12 +116,29 @@ class Function(val name: String, val params: List<String>) {
         return WrapResult(result, wrapped)
     }
 
+    private fun isVariableExists(name: String): Boolean {
+        if (!context.globalVars.contains(name)) {
+            if (!params.contains(name)) {
+                if (!vars.contains(name)) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
     private fun nodesToAst(nodes: List<Node>): ASTNode {
         if (nodes.size == 1) {
             return nodeToAstNode(nodes[0])
         } else if (nodes.size == 3) {
             if (nodes[1].value?.tokenType == TokenType.OPERATOR) {
-                val left = nodeToAstNode(nodes[0])
+                val left = nodeToAstNode(nodes[0], false)
+                if (left is ASTNode.Variable) {
+                    val name = left.name
+                    if (!isVariableExists(name)) {
+                        vars.add(name)
+                    }
+                }
                 val right = nodeToAstNode(nodes[2])
                 return nodeToAstNode(nodes[1], left, right)
             } else {
@@ -132,17 +149,15 @@ class Function(val name: String, val params: List<String>) {
         }
     }
 
-    private fun nodeToAstNode(node: Node): ASTNode {
+    private fun nodeToAstNode(node: Node, checkVariableExistence: Boolean = true): ASTNode {
         return when(node.value?.tokenType) {
             TokenType.NUMBER -> ASTNode.ImmediateValue((node.value as Number).value)
             TokenType.SYMBOL -> {
                 val name = (node.value as Symbol).content
                 if (!node.isFunction) {
-                    if (!context.globalVars.contains(name)) {
-                        if (!params.contains(name)) {
-                            if (!vars.contains(name)) {
-                                vars.add(name)
-                            }
+                    if (checkVariableExistence) {
+                        if (!isVariableExists(name)) {
+                            throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
                         }
                     }
                     ASTNode.Variable(name)
