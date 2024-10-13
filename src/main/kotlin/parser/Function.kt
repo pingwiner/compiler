@@ -148,6 +148,8 @@ class Function(val name: String, val params: List<String>) {
                     ASTNode.Variable(name)
                 } else {
                     val arguments = parseFunctionArguments(node.subNodes ?: listOf())
+                    val intFunc = parseInternalFunction(node, name, arguments)
+                    if (intFunc != null) return intFunc
                     context.useFunction(name)
                     ASTNode.FunctionCall(name, arguments)
                 }
@@ -184,6 +186,40 @@ class Function(val name: String, val params: List<String>) {
             i = j + 1
         }
         return result
+    }
+
+    private fun parseInternalFunction(node: Node, name: String, args: List<ASTNode>): ASTNode? {
+        return when(name) {
+            "neg" -> {
+                checkArgumentsCount(node, name, 1)
+                val arg = args[0]
+                if (arg is ASTNode.ImmediateValue) {
+                    ASTNode.ImmediateValue(-arg.value)
+                } else {
+                    ASTNode.Neg(arg)
+                }
+            }
+            "inv" -> {
+                checkArgumentsCount(node, name, 1)
+                val arg = args[0]
+                if (arg is ASTNode.ImmediateValue) {
+                    ASTNode.ImmediateValue(arg.value.inv())
+                } else {
+                    ASTNode.Inv(arg)
+                }
+            }
+            else -> null
+        }
+    }
+
+    private fun checkArgumentsCount(node: Node, name: String, count: Int) {
+        val argMap = mapOf(
+            "neg" to 1,
+            "inv" to 1
+        )
+        if (argMap[name] != count) {
+            throw IllegalArgumentException("$count argument(s) expected by $name function " + node.value?.at())
+        }
     }
 
     private fun nodeToAstNode(node: Node, left: ASTNode, right: ASTNode): ASTNode {

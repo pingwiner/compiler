@@ -102,4 +102,16 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
     class Xor(left: ASTNode, right: ASTNode) : ASTNode(left, right, "^")
 
     class Mod(left: ASTNode, right: ASTNode) : ASTNode(left, right, "%")
+
+    class Neg(val arg: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "-($arg)"
+        }
+    }
+
+    class Inv(val arg: ASTNode) : ASTNode() {
+        override fun toString(): String {
+            return "~($arg)"
+        }
+    }
 }

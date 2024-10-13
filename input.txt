@@ -12,5 +12,5 @@ fun main() {
     (a = a - 1) repeat(3);
     (a = a * 2) until(a < 1000);
     a = 2 && 4;
-    result = a;
+    result = a & 3 | 2 / neg(3) + inv(a);
 }
