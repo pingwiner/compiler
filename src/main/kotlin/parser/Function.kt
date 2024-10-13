@@ -116,7 +116,7 @@ class Function(val name: String, val params: List<String>) {
         return WrapResult(result, wrapped)
     }
 
-    private fun isVariableExists(name: String): Boolean {
+    private fun variableExists(name: String): Boolean {
         if (!context.globalVars.contains(name)) {
             if (!params.contains(name)) {
                 if (!vars.contains(name)) {
@@ -132,10 +132,11 @@ class Function(val name: String, val params: List<String>) {
             return nodeToAstNode(nodes[0])
         } else if (nodes.size == 3) {
             if (nodes[1].value?.tokenType == TokenType.OPERATOR) {
-                val left = nodeToAstNode(nodes[0], false)
+                val isAssignment = (nodes[1].value as Operator).type == OperatorType.ASSIGN
+                val left = nodeToAstNode(nodes[0], !isAssignment)
                 if (left is ASTNode.Variable) {
                     val name = left.name
-                    if (!isVariableExists(name)) {
+                    if (!variableExists(name)) {
                         vars.add(name)
                     }
                 }
@@ -145,7 +146,7 @@ class Function(val name: String, val params: List<String>) {
                 throw IllegalArgumentException("Unexpected token " + nodes[1].value?.at())
             }
         } else {
-            throw IllegalArgumentException("Syntax error at node " + nodes[0].toString())
+            throw IllegalArgumentException("Syntax error " + nodes[0].value?.at())
         }
     }
 
@@ -156,7 +157,7 @@ class Function(val name: String, val params: List<String>) {
                 val name = (node.value as Symbol).content
                 if (!node.isFunction) {
                     if (checkVariableExistence) {
-                        if (!isVariableExists(name)) {
+                        if (!variableExists(name)) {
                             throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
                         }
                     }
