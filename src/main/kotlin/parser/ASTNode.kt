@@ -40,7 +40,7 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
         }
     }
 
-    class Variable(val name: String): ASTNode() {
+    class Variable(val name: String, val index: ASTNode? = null): ASTNode() {
         override fun toString(): String {
             return name
         }

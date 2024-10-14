@@ -46,6 +46,7 @@ class Function(val name: String, val params: List<String>) {
 
     private fun parseStatementNodes(inputNodes: List<Node>): Statement {
         var nodes = wrapFunctionCalls(inputNodes)
+        nodes = wrapArrayAccess(nodes)
         nodes = removeBraces(nodes)
 
         var level = maxPriorityLevel
@@ -64,9 +65,26 @@ class Function(val name: String, val params: List<String>) {
         val result = mutableListOf<Node>()
         while (i < nodes.size) {
             if (nodes[i].value?.tokenType == TokenType.L_BRACE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
-                val j = findLastBrace(nodes, i)
+                val j = findComplementBrace(nodes, i, TokenType.L_BRACE)
                 result.last().subNodes = nodes.subList(i + 1, j)
                 result.last().isFunction = true
+                i = j + 1
+            } else {
+                result.add(nodes[i])
+                i += 1
+            }
+        }
+        return result
+    }
+
+    private fun wrapArrayAccess(nodes: List<Node>): List<Node> {
+        var i = 0
+        val result = mutableListOf<Node>()
+        while (i < nodes.size) {
+            if (nodes[i].value?.tokenType == TokenType.L_SQUARE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
+                val j = findComplementBrace(nodes, i, TokenType.L_SQUARE)
+                result.last().subNodes = nodes.subList(i + 1, j)
+                result.last().isArrayAccess = true
                 i = j + 1
             } else {
                 result.add(nodes[i])
@@ -161,7 +179,16 @@ class Function(val name: String, val params: List<String>) {
                             throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
                         }
                     }
-                    ASTNode.Variable(name)
+                    node.subNodes?.let {
+                        if (!context.arrays.containsKey(name)) {
+                            throw IllegalArgumentException("Unknown array $name " + node.value?.at())
+                        }
+                        val index = parseIndex(it)
+                        if ((index is ASTNode.ImmediateValue) && (index.value >= context.arrays[name]!!)) {
+                            throw IllegalArgumentException("Index out of bounds $name[${index.value}] " + node.value?.at())
+                        }
+                        ASTNode.Variable(name, index)
+                    } ?: ASTNode.Variable(name)
                 } else {
                     val arguments = parseFunctionArguments(node.subNodes ?: listOf())
                     val intFunc = parseInternalFunction(node, name, arguments)
@@ -202,6 +229,11 @@ class Function(val name: String, val params: List<String>) {
             i = j + 1
         }
         return result
+    }
+
+    private fun parseIndex(nodes: List<Node>): ASTNode {
+        val statement = parseStatementNodes(nodes)
+        return statement.node
     }
 
     private fun parseInternalFunction(node: Node, name: String, args: List<ASTNode>): ASTNode? {

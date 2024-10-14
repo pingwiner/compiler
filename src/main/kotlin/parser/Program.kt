@@ -7,7 +7,7 @@ class Program : ParserContext {
     val functions = mutableListOf<Function>()
     override val globalVars = mutableListOf<String>()
     val useFunc = mutableMapOf<String, Int>()
-    val arrays = mutableMapOf<String, Int>()
+    override val arrays = mutableMapOf<String, Int>()
 
     override fun useFunction(name: String) {
         if (useFunc.contains(name)) {

@@ -6,6 +6,7 @@ class Node() {
     var value: Token? = null
     var subNodes: List<Node>? = null
     var isFunction = false
+    var isArrayAccess = false
 
     constructor(token: Token) : this() {
         value = token

@@ -129,14 +129,19 @@ fun findLastCurlBrace(tokens: List<Token>, start: Int): Int {
     return -1
 }
 
-fun findLastBrace(nodes: List<Node>, start: Int): Int {
+fun findComplementBrace(nodes: List<Node>, start: Int, braceType: TokenType): Int {
+    val complement = mapOf(
+        TokenType.L_BRACE to TokenType.R_BRACE,
+        TokenType.L_SQUARE to TokenType.R_SQUARE
+    )
+    if (!complement.contains(braceType)) return -1
     val stack = Stack<Int>()
     var i = start
     while (i < nodes.size) {
-        if (nodes[i].value?.tokenType == TokenType.L_BRACE) {
+        if (nodes[i].value?.tokenType == braceType) {
             stack.push(1)
         }
-        if (nodes[i].value?.tokenType == TokenType.R_BRACE) {
+        if (nodes[i].value?.tokenType == complement[braceType]) {
             stack.pop()
             if (stack.isEmpty()) return i
         }
