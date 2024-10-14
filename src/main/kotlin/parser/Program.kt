@@ -1,11 +1,13 @@
 package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
+import org.pingwiner.compiler.Number
 
 class Program : ParserContext {
     val functions = mutableListOf<Function>()
     override val globalVars = mutableListOf<String>()
     val useFunc = mutableMapOf<String, Int>()
+    val arrays = mutableMapOf<String, Int>()
 
     override fun useFunction(name: String) {
         if (useFunc.contains(name)) {
@@ -109,7 +111,28 @@ class Program : ParserContext {
             throw IllegalArgumentException("Variable redefinition: $varName " + tokens[start + 1].at())
         }
 
-        return start + 2
+        when(tokens[start + 2].tokenType) {
+            TokenType.END -> {
+                return start + 2
+            }
+            TokenType.L_SQUARE -> {
+                if (tokens[start + 3].tokenType != TokenType.NUMBER) {
+                    throw IllegalArgumentException("Unexpected token " + tokens[start + 3].at())
+                }
+                val size = (tokens[start + 3] as Number).value
+                if (tokens[start + 4].tokenType != TokenType.R_SQUARE) {
+                    throw IllegalArgumentException("Unexpected token " + tokens[start + 4].at())
+                }
+                if (tokens[start + 5].tokenType != TokenType.END) {
+                    throw IllegalArgumentException("Unexpected token " + tokens[start + 5].at())
+                }
+                arrays[varName] = size
+                return start + 5
+            }
+            else -> {
+                throw IllegalArgumentException("Unexpected token " + tokens[start + 2].at())
+            }
+        }
     }
 
 }

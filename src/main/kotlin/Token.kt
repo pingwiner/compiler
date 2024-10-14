@@ -9,6 +9,8 @@ enum class TokenType {
     R_BRACE,
     L_CURL,
     R_CURL,
+    L_SQUARE,
+    R_SQUARE,
     COMMA,
     END
 }

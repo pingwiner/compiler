@@ -48,6 +48,17 @@ class Lexer {
     }
 
     private fun space(c: Char) {
+        val specialSymbols = mapOf(
+            '(' to TokenType.L_BRACE,
+            ')' to TokenType.R_BRACE,
+            '{' to TokenType.L_CURL,
+            '}' to TokenType.R_CURL,
+            '[' to TokenType.L_SQUARE,
+            ']' to TokenType.R_SQUARE,
+            ';' to TokenType.END,
+            ',' to TokenType.COMMA
+        )
+
         if (c.isLetter()) {
             currentToken.clear()
             currentToken.append(c)
@@ -60,18 +71,10 @@ class Lexer {
             currentToken.clear()
             currentToken.append(c)
             state = State.OPERATOR
-        } else if (c == '(') {
-            tokens.add(Token(TokenType.L_BRACE, line, position))
-        } else if (c == ')') {
-            tokens.add(Token(TokenType.R_BRACE, line, position))
-        } else if (c == ';') {
-            tokens.add(Token(TokenType.END, line, position))
-        } else if (c == '{') {
-            tokens.add(Token(TokenType.L_CURL, line, position))
-        } else if (c == '}') {
-            tokens.add(Token(TokenType.R_CURL, line, position))
-        } else if (c == ',') {
-            tokens.add(Token(TokenType.COMMA, line, position))
+        } else {
+            specialSymbols[c]?.let { tokenType ->
+                tokens.add(Token(tokenType, line, position))
+            }
         }
     }
 

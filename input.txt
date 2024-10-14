@@ -1,5 +1,6 @@
 
 var globalX;
+var arr[256];
 
 fun f1(x, y) {
     result = x + y;
