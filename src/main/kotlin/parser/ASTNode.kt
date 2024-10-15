@@ -46,9 +46,9 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
         }
     }
 
-    class Result: ASTNode() {
+    class Return: ASTNode() {
         override fun toString(): String {
-            return "result"
+            return "return"
         }
     }
 

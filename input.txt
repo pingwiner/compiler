@@ -3,7 +3,7 @@ var globalX;
 var arr[256];
 
 fun f1(x, y) {
-    result = x + y;
+    return x + y;
 }
 
 fun main() {
@@ -11,8 +11,8 @@ fun main() {
     a = arr[255];
     b = (a == 2) ? (a = a - 1) : (a = a + f1(f1(4, 5), 2));
     (a = a + 1) while(a > 0);
-    (a = a - 1) repeat(3);
+    (a = a - 1) repeat(3 + 2);
     (a = a * 2) until(a < 1000);
     a = 2 && 4;
-    result = a & 3 | 2 / neg(3) + inv(a);
+    return a & 3 | 2 / neg(3) + inv(a);
 }

@@ -100,6 +100,9 @@ class Lexer {
                 tokens.add(operator)
             } else if (keyword != null) {
                 tokens.add(keyword)
+                if (keyword.type == KeywordType.RETURN) {
+                    tokens.add(Operator(OperatorType.ASSIGN, line, position))
+                }
             } else {
                 tokens.add(Symbol(s, line, position - s.length))
             }

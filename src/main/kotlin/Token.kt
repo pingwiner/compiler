@@ -16,7 +16,7 @@ enum class TokenType {
 }
 
 enum class KeywordType(val value: String) {
-    RESULT("result"),
+    RETURN("return"),
     FUN("fun"),
     VAR("var")
 }

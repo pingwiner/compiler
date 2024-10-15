@@ -66,6 +66,9 @@ class Function(val name: String, val params: List<String>) {
         while (i < nodes.size) {
             if (nodes[i].value?.tokenType == TokenType.L_BRACE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
                 val j = findComplementBrace(nodes, i, TokenType.L_BRACE)
+                if (j == -1) {
+                    throw IllegalArgumentException(") not found " + nodes[i].value?.at())
+                }
                 result.last().subNodes = nodes.subList(i + 1, j)
                 result.last().isFunction = true
                 i = j + 1
@@ -83,6 +86,9 @@ class Function(val name: String, val params: List<String>) {
         while (i < nodes.size) {
             if (nodes[i].value?.tokenType == TokenType.L_SQUARE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
                 val j = findComplementBrace(nodes, i, TokenType.L_SQUARE)
+                if (j == -1) {
+                    throw IllegalArgumentException("] not found " + nodes[i].value?.at())
+                }
                 result.last().subNodes = nodes.subList(i + 1, j)
                 result.last().isArrayAccess = true
                 i = j + 1
@@ -198,8 +204,8 @@ class Function(val name: String, val params: List<String>) {
                 }
             }
             TokenType.KEYWORD -> {
-                if ((node.value as Keyword).type == KeywordType.RESULT) {
-                    ASTNode.Result()
+                if ((node.value as Keyword).type == KeywordType.RETURN) {
+                    ASTNode.Return()
                 } else {
                     throw IllegalArgumentException("Syntax error " + node.value?.at())
                 }
@@ -278,7 +284,7 @@ class Function(val name: String, val params: List<String>) {
             OperatorType.MULTIPLY -> ASTNode.Multiply(left, right)
             OperatorType.DIVIDE -> ASTNode.Divide(left, right)
             OperatorType.ASSIGN -> {
-                if (left is ASTNode.Variable || left is ASTNode.Result) {
+                if (left is ASTNode.Variable || left is ASTNode.Return) {
                     ASTNode.Assign(left, right)
                 } else {
                     throw IllegalArgumentException("Illegal assignment " + node.value?.at())
