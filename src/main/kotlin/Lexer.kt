@@ -9,6 +9,7 @@ enum class State {
 
 const val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 const val digits = "0123456789"
+const val hexDigits = "0123456789abcdefABCDEF"
 const val ops = "+-*/=<>?:&|%^!"
 
 fun Char.isLetter(): Boolean {
@@ -19,6 +20,10 @@ fun Char.isDigit(): Boolean {
     return digits.contains(this)
 }
 
+fun Char.isHexDigit(): Boolean {
+    return hexDigits.contains(this)
+}
+
 fun Char.isOp(): Boolean {
     return ops.contains(this)
 }
@@ -27,6 +32,7 @@ class Lexer {
     val tokens = mutableListOf<Token>()
     private var state: State = State.SPACE
     private var currentToken = StringBuilder()
+    private var hexMode = false
     var line = 1
     var position = 1
 
@@ -66,6 +72,7 @@ class Lexer {
         } else if (c.isDigit()) {
             currentToken.clear()
             currentToken.append(c)
+            hexMode = false
             state = State.NUMBER
         } else if (c.isOp()) {
             currentToken.clear()
@@ -78,11 +85,21 @@ class Lexer {
         }
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     private fun number(c: Char) {
-        if (c.isDigit()) {
+        if (!hexMode && c.isDigit()) {
+            currentToken.append(c)
+        } else if (hexMode && c.isHexDigit()) {
             currentToken.append(c)
         } else {
-            tokens.add(Number(currentToken.toString().toInt(), line, position - currentToken.length))
+            if (!hexMode && (c == 'x') && (currentToken.length == 1) && (currentToken[0] == '0')) {
+                hexMode = true
+                currentToken.append(c)
+                return
+            }
+            val format = HexFormat { number.prefix = "0x" }
+            val intValue = if (hexMode) currentToken.toString().hexToInt(format) else currentToken.toString().toInt()
+            tokens.add(Number(intValue, line, position - currentToken.length))
             currentToken.clear()
             state = State.SPACE
             space(c)
