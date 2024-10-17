@@ -114,4 +114,6 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
             return "~($arg)"
         }
     }
+
+    class Block(val subNodes: List<ASTNode>) : ASTNode()
 }

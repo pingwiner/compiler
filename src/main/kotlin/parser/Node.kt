@@ -7,6 +7,7 @@ class Node() {
     var subNodes: List<Node>? = null
     var isFunction = false
     var isArrayAccess = false
+    var isBlock = false
 
     constructor(token: Token) : this() {
         value = token

@@ -9,10 +9,13 @@ fun f1(x, y) {
 fun main() {
     globalX = f1(2, 3);
     a = arr[25];
-    b = (a == 2) ? (a = a - 1) : (a = a + f1(f1(4, 5), 2));
+    b = (a == 2) ? (a = a - 1) : {
+        a = a + f1(f1(4, 5), 2);
+        a = 2 && 4;
+    };
     (a = a + 1) while(a > 0);
     (a = a - 1) repeat(3 + 0x0C);
     (a = a * 2) until(a < 1000);
-    a = 2 && 4;
+
     return a & 3 | 2 / neg(3) + inv(a);
 }

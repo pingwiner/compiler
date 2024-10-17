@@ -31,44 +31,25 @@ val operatorPriorityMap = mapOf(
 
 val maxPriorityLevel = operatorPriorityMap.toList().maxByOrNull { (_, value) -> value }!!.second
 
-fun removeBraces(nodes: List<Node>): List<Node> {
-    val result = mutableListOf<Node>()
-    var i = 0
-    while(i < nodes.size) {
-        val n = nodes[i]
-        if (n.value!!.tokenType == TokenType.L_BRACE) {
-            val j = findRBrace(nodes, i)
-            if (j == -1) {
-                throw IllegalStateException("Unbalanced braces")
-            }
-            val subnodes = removeBraces(nodes.subList(i + 1, j))
-            if (subnodes.isEmpty()) {
-                //do nothing
-            } else if (subnodes.size == 1) {
-                result.add(subnodes[0])
-            } else {
-                val combined = Node(subnodes)
-                result.add(combined)
-            }
-            i = j + 1
-        } else {
-            result.add(n)
-            i += 1
-        }
-    }
-    return result
-}
-
-fun searchForEnd(tokens: List<Token>, start: Int): Int {
+fun searchForEnd(nodes: List<Node>, start: Int): Int {
     var i = start
-    while (i < tokens.size) {
-        if (tokens[i].tokenType == TokenType.END) return i
+    val stack = Stack<Int>()
+    while (i < nodes.size) {
+        if (nodes[i].value?.tokenType == TokenType.L_CURL) {
+            stack.push(1)
+        }
+        if (nodes[i].value?.tokenType == TokenType.R_CURL) {
+            stack.pop()
+        }
+        if (nodes[i].value?.tokenType == TokenType.END) {
+            if (stack.isEmpty()) return i
+        }
         i++
     }
     return i
 }
 
-private fun findRBrace(nodes: List<Node>, start: Int): Int {
+fun findRBrace(nodes: List<Node>, start: Int): Int {
     val stack = Stack<Int>()
     for (i in start..< nodes.size) {
         if (nodes[i].value!!.tokenType == TokenType.L_BRACE) {
@@ -132,7 +113,8 @@ fun findLastCurlBrace(tokens: List<Token>, start: Int): Int {
 fun findComplementBrace(nodes: List<Node>, start: Int, braceType: TokenType): Int {
     val complement = mapOf(
         TokenType.L_BRACE to TokenType.R_BRACE,
-        TokenType.L_SQUARE to TokenType.R_SQUARE
+        TokenType.L_SQUARE to TokenType.R_SQUARE,
+        TokenType.L_CURL to TokenType.R_CURL
     )
     if (!complement.contains(braceType)) return -1
     val stack = Stack<Int>()

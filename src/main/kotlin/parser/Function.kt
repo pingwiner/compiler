@@ -6,7 +6,7 @@ import org.pingwiner.compiler.Number
 class Function(val name: String, val params: List<String>) {
     private lateinit var context: ParserContext
     val vars = mutableListOf<String>()
-    val statements = mutableListOf<Statement>()
+    var root: ASTNode? = null
 
     override fun toString(): String {
         val sb = StringBuilder()
@@ -21,33 +21,33 @@ class Function(val name: String, val params: List<String>) {
         return "$name($sb)"
     }
 
-    open class Statement(
-        val node: ASTNode
-    )
-
     fun parse(tokens: List<Token>, context: ParserContext) {
         this.context = context
-        parseBlock(tokens)
+        val nodes = convertToNodes(tokens)
+        root = parseBlock(nodes)
     }
 
-    private fun parseBlock(tokens: List<Token>) {
+    private fun parseBlock(nodes: List<Node>) : ASTNode {
+        val statements = mutableListOf<ASTNode>()
         var i = 0
-        while (i < tokens.size) {
-            val end = searchForEnd(tokens, i)
-            val statement = parseStatement(tokens.subList(i, end))
+        while (i < nodes.size) {
+            val end = searchForEnd(nodes, i)
+            val statement = parseStatement(nodes.subList(i, end))
             i = end + 1
             statements.add(statement)
         }
+        if (statements.size == 1) return statements[0]
+        return ASTNode.Block(statements)
     }
 
-    private fun parseStatement(tokens: List<Token>): Statement {
-        return parseStatementNodes(convertToNodes(tokens))
+    private fun parseStatement(nodes: List<Node>): ASTNode {
+        return parseStatementNodes(wrapBlocks(nodes))
     }
 
-    private fun parseStatementNodes(inputNodes: List<Node>): Statement {
+    private fun parseStatementNodes(inputNodes: List<Node>): ASTNode {
         var nodes = wrapFunctionCalls(inputNodes)
         nodes = wrapArrayAccess(nodes)
-        nodes = removeBraces(nodes)
+        nodes = wrapBraces(nodes)
 
         var level = maxPriorityLevel
         while (level >= 0) {
@@ -57,7 +57,7 @@ class Function(val name: String, val params: List<String>) {
                 level--
             }
         }
-        return Statement(nodesToAst(nodes))
+        return nodesToAst(nodes)
     }
 
     private fun wrapFunctionCalls(nodes: List<Node>): List<Node>  {
@@ -100,6 +100,58 @@ class Function(val name: String, val params: List<String>) {
         return result
     }
 
+    private fun wrapBraces(nodes: List<Node>): List<Node> {
+        val result = mutableListOf<Node>()
+        var i = 0
+        while(i < nodes.size) {
+            val n = nodes[i]
+            if (n.value?.tokenType == TokenType.L_BRACE) {
+                val j = findRBrace(nodes, i)
+                if (j == -1) {
+                    throw IllegalStateException(") not found " + n.value?.at())
+                }
+                val subnodes = wrapBraces(nodes.subList(i + 1, j))
+                if (subnodes.isEmpty()) {
+                    //do nothing
+                } else if (subnodes.size == 1) {
+                    result.add(subnodes[0])
+                } else {
+                    val combined = Node(subnodes)
+                    result.add(combined)
+                }
+                i = j + 1
+            } else {
+                result.add(n)
+                i += 1
+            }
+        }
+        return result
+    }
+
+    private fun wrapBlocks(nodes: List<Node>): List<Node> {
+        val result = mutableListOf<Node>()
+        var i = 0
+        while(i < nodes.size) {
+            val n = nodes[i]
+            if (n.value?.tokenType == TokenType.L_CURL) {
+                val j = findComplementBrace(nodes, i, TokenType.L_CURL)
+                if (j == -1) {
+                    throw IllegalStateException("} not found " + n.value?.at())
+                }
+                val subnodes = nodes.subList(i + 1, j)
+                val combined = Node(subnodes)
+                combined.isBlock = true
+                result.add(combined)
+                i = j + 1
+            } else {
+                result.add(n)
+                i += 1
+            }
+        }
+        return result
+    }
+
+
     data class WrapResult(
         val nodes: List<Node>,
         val wrapped: Boolean
@@ -128,9 +180,13 @@ class Function(val name: String, val params: List<String>) {
                     }
                 }
             } else {
-                val wrapResult = wrapTokensWithPriority(n.subNodes!!, priority)
-                wrapped = wrapped or wrapResult.wrapped
-                result.add(Node(wrapResult.nodes))
+                if (!n.isBlock) {
+                    val wrapResult = wrapTokensWithPriority(n.subNodes!!, priority)
+                    wrapped = wrapped or wrapResult.wrapped
+                    result.add(Node(wrapResult.nodes))
+                } else {
+                    result.add(n)
+                }
                 i++
                 continue
             }
@@ -212,7 +268,11 @@ class Function(val name: String, val params: List<String>) {
             }
             null -> {
                 if (node.subNodes != null) {
-                    nodesToAst(node.subNodes!!)
+                    if (node.isBlock) {
+                        parseBlock(node.subNodes!!)
+                    } else {
+                        nodesToAst(node.subNodes!!)
+                    }
                 } else {
                     throw IllegalArgumentException("Bad token " + node.value?.at())
                 }
@@ -230,16 +290,14 @@ class Function(val name: String, val params: List<String>) {
             if (j == -1) {
                 j = nodes.size
             }
-            val statement = parseStatementNodes(nodes.subList(i, j))
-            result.add(statement.node)
+            result.add(parseStatementNodes(nodes.subList(i, j)))
             i = j + 1
         }
         return result
     }
 
     private fun parseIndex(nodes: List<Node>): ASTNode {
-        val statement = parseStatementNodes(nodes)
-        return statement.node
+        return parseStatementNodes(nodes)
     }
 
     private fun parseInternalFunction(node: Node, name: String, args: List<ASTNode>): ASTNode? {
