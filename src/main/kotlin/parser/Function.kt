@@ -197,7 +197,7 @@ class Function(val name: String, val params: List<String>) {
     }
 
     private fun variableExists(name: String): Boolean {
-        if (!context.globalVars.contains(name)) {
+        if (!context.hasVariable(name)) {
             if (!params.contains(name)) {
                 if (!vars.contains(name)) {
                     return false
@@ -242,11 +242,11 @@ class Function(val name: String, val params: List<String>) {
                         }
                     }
                     node.subNodes?.let {
-                        if (!context.arrays.containsKey(name)) {
+                        if (!context.hasArray(name)) {
                             throw IllegalArgumentException("Unknown array $name " + node.value?.at())
                         }
                         val index = parseIndex(it)
-                        if ((index is ASTNode.ImmediateValue) && (index.value >= context.arrays[name]!!)) {
+                        if ((index is ASTNode.ImmediateValue) && (index.value >= context.arraySize(name))) {
                             throw IllegalArgumentException("Index out of bounds $name[${index.value}] " + node.value?.at())
                         }
                         ASTNode.Variable(name, index)

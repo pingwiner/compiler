@@ -1,6 +1,7 @@
 package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
+import org.pingwiner.compiler.Number
 
 val operatorPriorityMap = mapOf(
     OperatorType.ASSIGN to 0,
@@ -150,7 +151,15 @@ fun findNextComma(nodes: List<Node>, start: Int): Int {
 }
 
 fun unexpectedTokenError(token: Token) {
-    throw IllegalArgumentException("Unexpected token at line " + token.at())
+    throw IllegalArgumentException("Unexpected token " + token.at())
 }
 
-
+fun parseArrayLiteral(tokens: List<Token>) : List<Int> {
+    val result = mutableListOf<Int>()
+    for (token in tokens) {
+        if (token is Number) {
+            result.add(token.value)
+        }
+    }
+    return result
+}

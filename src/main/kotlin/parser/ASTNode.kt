@@ -42,7 +42,11 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
 
     class Variable(val name: String, val index: ASTNode? = null): ASTNode() {
         override fun toString(): String {
-            return name
+            if (index != null) {
+                return "$name[$index]"
+            } else {
+                return name
+            }
         }
     }
 

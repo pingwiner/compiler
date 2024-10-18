@@ -5,9 +5,8 @@ import org.pingwiner.compiler.Number
 
 class Program : ParserContext {
     val functions = mutableListOf<Function>()
-    override val globalVars = mutableListOf<String>()
+    val globalVars = mutableMapOf<String, Variable>()
     val useFunc = mutableMapOf<String, Int>()
-    override val arrays = mutableMapOf<String, Int>()
 
     override fun useFunction(name: String) {
         if (useFunc.contains(name)) {
@@ -15,6 +14,19 @@ class Program : ParserContext {
         } else {
             useFunc[name] = 1
         }
+    }
+
+    override fun hasVariable(name: String): Boolean {
+        return globalVars.containsKey(name)
+    }
+
+    override fun hasArray(name: String): Boolean {
+        return globalVars[name]?.isArray() == true
+    }
+
+    override fun arraySize(name: String): Int {
+        if (!hasArray(name)) return 0
+        return globalVars[name]?.size ?: 0
     }
 
     fun parse(tokens: List<Token>) {
@@ -105,8 +117,8 @@ class Program : ParserContext {
             throw IllegalArgumentException("Variable name expected " + tokens[start].at(4))
         }
         val varName = (tokens[start + 1] as Symbol).content
-        if (!globalVars.contains(varName)) {
-            globalVars.add(varName)
+        if (!hasVariable(varName)) {
+            globalVars[varName] = Variable(varName)
         } else {
             throw IllegalArgumentException("Variable redefinition: $varName " + tokens[start + 1].at())
         }
@@ -117,20 +129,53 @@ class Program : ParserContext {
             }
             TokenType.L_SQUARE -> {
                 if (tokens[start + 3].tokenType != TokenType.NUMBER) {
-                    throw IllegalArgumentException("Unexpected token " + tokens[start + 3].at())
+                    unexpectedTokenError(tokens[start + 3])
                 }
                 val size = (tokens[start + 3] as Number).value
                 if (tokens[start + 4].tokenType != TokenType.R_SQUARE) {
-                    throw IllegalArgumentException("Unexpected token " + tokens[start + 4].at())
+                    unexpectedTokenError(tokens[start + 4])
                 }
                 if (tokens[start + 5].tokenType != TokenType.END) {
-                    throw IllegalArgumentException("Unexpected token " + tokens[start + 5].at())
+                    unexpectedTokenError(tokens[start + 5])
                 }
-                arrays[varName] = size
+                globalVars[varName]?.size = size
                 return start + 5
             }
+            TokenType.OPERATOR -> {
+                val operator = tokens[start + 2] as Operator
+                if (operator.type != OperatorType.ASSIGN) {
+                    unexpectedTokenError(tokens[start + 2])
+                }
+                when(tokens[start + 3].tokenType) {
+                    TokenType.NUMBER -> {
+                        globalVars[varName]?.value = listOf((tokens[start + 3] as Number).value)
+                        if (tokens[start + 4].tokenType != TokenType.END) {
+                            unexpectedTokenError(tokens[start + 4])
+                        }
+                        return start + 4
+                    }
+                    TokenType.L_CURL -> {
+                        val j = findLastCurlBrace(tokens, start + 3)
+                        if (j == -1) {
+                            throw IllegalArgumentException("Missing } " + tokens[start + 3].at())
+                        }
+                        val literal = parseArrayLiteral(tokens.subList(start + 4, j))
+                        globalVars[varName]?.value = literal
+                        globalVars[varName]?.size = literal.size
+                        if (tokens[j + 1].tokenType != TokenType.END) {
+                            unexpectedTokenError(tokens[j + 1])
+                        }
+                        return j + 1
+                    }
+                    else -> {
+                        unexpectedTokenError(tokens[start + 3])
+                        return -1
+                    }
+                }
+            }
             else -> {
-                throw IllegalArgumentException("Unexpected token " + tokens[start + 2].at())
+                unexpectedTokenError(tokens[start + 2])
+                return -1
             }
         }
     }

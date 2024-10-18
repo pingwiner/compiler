@@ -1,21 +1,12 @@
 
-var globalX;
-var arr[0xfe];
-
-fun f1(x, y) {
-    return x + y;
-}
+var globalA = {1, 2, 3, 4, 5, 6};
+var globalB = 0x100;
 
 fun main() {
-    globalX = f1(2, 3);
-    a = arr[25];
-    b = (a == 2) ? (a = a - 1) : {
-        a = a + f1(f1(4, 5), 2);
-        a = 2 && 4;
-    };
-    (a = a + 1) while(a > 0);
-    (a = a - 1) repeat(3 + 0x0C);
-    (a = a * 2) until(a < 1000);
-
-    return a & 3 | 2 / neg(3) + inv(a);
+    a = globalA[1];
+    a = a + globalB;
+    {
+        a = a + 1;
+    } while (a < 10);
+    return 1;
 }

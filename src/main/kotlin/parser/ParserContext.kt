@@ -1,8 +1,8 @@
 package org.pingwiner.compiler.parser
 
 interface ParserContext {
-    val globalVars: List<String>
-    val arrays: Map<String, Int>
-
     fun useFunction(name: String)
+    fun hasVariable(name: String): Boolean
+    fun hasArray(name: String): Boolean
+    fun arraySize(name: String): Int
 }
