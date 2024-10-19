@@ -241,16 +241,7 @@ class Function(val name: String, val params: List<String>) {
                             throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
                         }
                     }
-                    node.subNodes?.let {
-                        if (!context.hasArray(name)) {
-                            throw IllegalArgumentException("Unknown array $name " + node.value?.at())
-                        }
-                        val index = parseIndex(it)
-                        if ((index is ASTNode.ImmediateValue) && (index.value >= context.arraySize(name))) {
-                            throw IllegalArgumentException("Index out of bounds $name[${index.value}] " + node.value?.at())
-                        }
-                        ASTNode.Variable(name, index)
-                    } ?: ASTNode.Variable(name)
+                    parseVar(name, node)
                 } else {
                     val arguments = parseFunctionArguments(node.subNodes ?: listOf())
                     val intFunc = parseInternalFunction(node, name, arguments)
@@ -296,6 +287,21 @@ class Function(val name: String, val params: List<String>) {
         return result
     }
 
+    private fun parseVar(name: String, node: Node): ASTNode {
+        //Check if array
+        return node.subNodes?.let {
+            if (!context.hasArray(name)) {
+                throw IllegalArgumentException("Unknown array $name " + node.value?.at())
+            }
+            val index = parseIndex(it)
+            if ((index is ASTNode.ImmediateValue) && (index.value >= context.arraySize(name))) {
+                throw IllegalArgumentException("Index out of bounds $name[${index.value}] " + node.value?.at())
+            }
+            ASTNode.Variable(name, index)
+        //else create simple var
+        } ?: ASTNode.Variable(name)
+    }
+
     private fun parseIndex(nodes: List<Node>): ASTNode {
         return parseStatementNodes(nodes)
     }
@@ -303,7 +309,7 @@ class Function(val name: String, val params: List<String>) {
     private fun parseInternalFunction(node: Node, name: String, args: List<ASTNode>): ASTNode? {
         return when(name) {
             "neg" -> {
-                checkArgumentsCount(node, name, 1)
+                checkArgumentsCount(node, name, args.size)
                 val arg = args[0]
                 if (arg is ASTNode.ImmediateValue) {
                     ASTNode.ImmediateValue(-arg.value)
@@ -312,7 +318,7 @@ class Function(val name: String, val params: List<String>) {
                 }
             }
             "inv" -> {
-                checkArgumentsCount(node, name, 1)
+                checkArgumentsCount(node, name, args.size)
                 val arg = args[0]
                 if (arg is ASTNode.ImmediateValue) {
                     ASTNode.ImmediateValue(arg.value.inv())

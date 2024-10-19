@@ -3,7 +3,7 @@ package org.pingwiner.compiler
 enum class State {
     SPACE,
     NUMBER,
-    VAR_NAME,
+    SYMBOL,
     OPERATOR
 }
 
@@ -41,7 +41,7 @@ class Lexer {
             when(state) {
                 State.SPACE -> space(c)
                 State.NUMBER -> number(c)
-                State.VAR_NAME -> word(c)
+                State.SYMBOL -> word(c)
                 State.OPERATOR -> operator(c)
             }
             if (c == '\n') {
@@ -57,7 +57,7 @@ class Lexer {
         if (c.isLetter()) {
             currentToken.clear()
             currentToken.append(c)
-            state = State.VAR_NAME
+            state = State.SYMBOL
         } else if (c.isDigit()) {
             currentToken.clear()
             currentToken.append(c)
