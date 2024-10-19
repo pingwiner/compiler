@@ -64,8 +64,8 @@ class Function(val name: String, val params: List<String>) {
         var i = 0
         val result = mutableListOf<Node>()
         while (i < nodes.size) {
-            if (nodes[i].value?.tokenType == TokenType.L_BRACE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
-                val j = findComplementBrace(nodes, i, TokenType.L_BRACE)
+            if (nodes[i].value is SpecialSymbol.LBrace && (i > 0) && nodes[i - 1].value is Symbol) {
+                val j = findComplementBrace<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(nodes, i)
                 if (j == -1) {
                     throw IllegalArgumentException(") not found " + nodes[i].value?.at())
                 }
@@ -84,8 +84,8 @@ class Function(val name: String, val params: List<String>) {
         var i = 0
         val result = mutableListOf<Node>()
         while (i < nodes.size) {
-            if (nodes[i].value?.tokenType == TokenType.L_SQUARE && (i > 0) && nodes[i - 1].value?.tokenType == TokenType.SYMBOL) {
-                val j = findComplementBrace(nodes, i, TokenType.L_SQUARE)
+            if (nodes[i].value is SpecialSymbol.LSquare && (i > 0) && nodes[i - 1].value is Symbol) {
+                val j = findComplementBrace<SpecialSymbol.LSquare, SpecialSymbol.RSquare>(nodes, i)
                 if (j == -1) {
                     throw IllegalArgumentException("] not found " + nodes[i].value?.at())
                 }
@@ -105,8 +105,8 @@ class Function(val name: String, val params: List<String>) {
         var i = 0
         while(i < nodes.size) {
             val n = nodes[i]
-            if (n.value?.tokenType == TokenType.L_BRACE) {
-                val j = findRBrace(nodes, i)
+            if (n.value is SpecialSymbol.LBrace) {
+                val j = findComplementBrace<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(nodes, i)
                 if (j == -1) {
                     throw IllegalStateException(") not found " + n.value?.at())
                 }
@@ -133,8 +133,8 @@ class Function(val name: String, val params: List<String>) {
         var i = 0
         while(i < nodes.size) {
             val n = nodes[i]
-            if (n.value?.tokenType == TokenType.L_CURL) {
-                val j = findComplementBrace(nodes, i, TokenType.L_CURL)
+            if (n.value is SpecialSymbol.LCurl) {
+                val j = findComplementBrace<SpecialSymbol.LCurl, SpecialSymbol.RCurl>(nodes, i)
                 if (j == -1) {
                     throw IllegalStateException("} not found " + n.value?.at())
                 }
@@ -167,7 +167,7 @@ class Function(val name: String, val params: List<String>) {
                 if (!wrapped) {
                     if (n.value is Operator) {
                         if (nodes.size > 3) {
-                            if (operatorPriorityMap[(n.value as Operator).type] == priority) {
+                            if (operatorPriorityMap[n.value!!::class] == priority) {
                                 val subnodes = nodes.subList(i - 1, i + 2)
                                 val combined = Node(subnodes)
                                 result.removeLast()
@@ -211,8 +211,8 @@ class Function(val name: String, val params: List<String>) {
         if (nodes.size == 1) {
             return nodeToAstNode(nodes[0])
         } else if (nodes.size == 3) {
-            if (nodes[1].value?.tokenType == TokenType.OPERATOR) {
-                val isAssignment = (nodes[1].value as Operator).type == OperatorType.ASSIGN
+            if (nodes[1].value is Operator) {
+                val isAssignment = nodes[1].value is Operator.Assign
                 val left = nodeToAstNode(nodes[0], !isAssignment)
                 if (left is ASTNode.Variable) {
                     val name = left.name
@@ -231,9 +231,9 @@ class Function(val name: String, val params: List<String>) {
     }
 
     private fun nodeToAstNode(node: Node, checkVariableExistence: Boolean = true): ASTNode {
-        return when(node.value?.tokenType) {
-            TokenType.NUMBER -> ASTNode.ImmediateValue((node.value as Number).value)
-            TokenType.SYMBOL -> {
+        return when(node.value) {
+            is Number -> ASTNode.ImmediateValue((node.value as Number).value)
+            is Symbol -> {
                 val name = (node.value as Symbol).content
                 if (!node.isFunction) {
                     if (checkVariableExistence) {
@@ -259,8 +259,8 @@ class Function(val name: String, val params: List<String>) {
                     ASTNode.FunctionCall(name, arguments)
                 }
             }
-            TokenType.KEYWORD -> {
-                if ((node.value as Keyword).type == KeywordType.RETURN) {
+            is Keyword -> {
+                if (node.value is Keyword.Return) {
                     ASTNode.Return()
                 } else {
                     throw IllegalArgumentException("Syntax error " + node.value?.at())
@@ -274,7 +274,7 @@ class Function(val name: String, val params: List<String>) {
                         nodesToAst(node.subNodes!!)
                     }
                 } else {
-                    throw IllegalArgumentException("Bad token " + node.value?.at())
+                    throw IllegalArgumentException("Bad token $node")
                 }
             }
             else -> { throw IllegalArgumentException("Syntax error " + node.value?.at())}
@@ -336,37 +336,37 @@ class Function(val name: String, val params: List<String>) {
 
     private fun nodeToAstNode(node: Node, left: ASTNode, right: ASTNode): ASTNode {
         val op = node.value as Operator
-        return when(op.type) {
-            OperatorType.PLUS -> ASTNode.Plus(left, right)
-            OperatorType.MINUS -> ASTNode.Minus(left, right)
-            OperatorType.MULTIPLY -> ASTNode.Multiply(left, right)
-            OperatorType.DIVIDE -> ASTNode.Divide(left, right)
-            OperatorType.ASSIGN -> {
-                if (left is ASTNode.Variable || left is ASTNode.Return) {
-                    ASTNode.Assign(left, right)
+        return when(op) {
+            is Operator.Plus -> ASTNode.BinaryOperation.Plus(left, right)
+            is Operator.Minus -> ASTNode.BinaryOperation.Minus(left, right)
+            is Operator.Multiply -> ASTNode.BinaryOperation.Multiply(left, right)
+            is Operator.Divide -> ASTNode.BinaryOperation.Divide(left, right)
+            is Operator.Assign -> {
+                if (left is ASTNode.Variable) {
+                    ASTNode.BinaryOperation.Assign(left, right)
+                } else if (left is ASTNode.Return) {
+                    ASTNode.Return(right)
                 } else {
                     throw IllegalArgumentException("Illegal assignment " + node.value?.at())
                 }
             }
-            OperatorType.IF -> ASTNode.If(left, right)
-            OperatorType.EQ -> ASTNode.Eq(left, right)
-            OperatorType.NEQ -> ASTNode.Neq(left, right)
-            OperatorType.LT -> ASTNode.Lt(left, right)
-            OperatorType.GT -> ASTNode.Gt(left, right)
-            OperatorType.GTEQ -> ASTNode.GtEq(left, right)
-            OperatorType.LTEQ -> ASTNode.LtEq(left, right)
-            OperatorType.ELSE -> ASTNode.Else(left, right)
-            OperatorType.WHILE -> ASTNode.While(left, right)
-            OperatorType.REPEAT -> ASTNode.Repeat(left, right)
-            OperatorType.UNTIL -> ASTNode.Until(left, right)
-            OperatorType.SHR -> ASTNode.Shr(left, right)
-            OperatorType.SHL -> ASTNode.Shl(left, right)
-            OperatorType.ORB -> ASTNode.OrB(left, right)
-            OperatorType.ORL -> ASTNode.OrL(left, right)
-            OperatorType.ANDB -> ASTNode.AndB(left, right)
-            OperatorType.ANDL -> ASTNode.AndL(left, right)
-            OperatorType.XOR -> ASTNode.Xor(left, right)
-            OperatorType.MOD -> ASTNode.Mod(left, right)
+            is Operator.If -> ASTNode.BinaryOperation.If(left, right)
+            is Operator.Eq -> ASTNode.BinaryOperation.Eq(left, right)
+            is Operator.Neq -> ASTNode.BinaryOperation.Neq(left, right)
+            is Operator.Lt -> ASTNode.BinaryOperation.Lt(left, right)
+            is Operator.Gt -> ASTNode.BinaryOperation.Gt(left, right)
+            is Operator.GtEq -> ASTNode.BinaryOperation.GtEq(left, right)
+            is Operator.LtEq -> ASTNode.BinaryOperation.LtEq(left, right)
+            is Operator.Else -> ASTNode.BinaryOperation.Else(left, right)
+            is Operator.While -> ASTNode.While(left, right)
+            is Operator.Repeat -> ASTNode.Repeat(left, right)
+            is Operator.Until -> ASTNode.Until(left, right)
+            is Operator.Shr -> ASTNode.BinaryOperation.Shr(left, right)
+            is Operator.Shl -> ASTNode.BinaryOperation.Shl(left, right)
+            is Operator.Or -> ASTNode.BinaryOperation.Or(left, right)
+            is Operator.And -> ASTNode.BinaryOperation.And(left, right)
+            is Operator.Xor -> ASTNode.BinaryOperation.Xor(left, right)
+            is Operator.Mod -> ASTNode.BinaryOperation.Mod(left, right)
         }
     }
 

@@ -1,38 +1,54 @@
 package org.pingwiner.compiler.parser
 
-sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, private val operation: String = "") {
+sealed class ASTNode {
 
-    override fun toString(): String {
-        return "$left $operation $right"
-    }
-
-    class Plus(left: ASTNode, right: ASTNode) : ASTNode(left, right, "+")
-
-    class Minus(left: ASTNode, right: ASTNode) : ASTNode(left, right, "-")
-
-    class Multiply(left: ASTNode, right: ASTNode) : ASTNode(left, right, "*")
-
-    class Divide(left: ASTNode, right: ASTNode) : ASTNode(left, right, "/")
-
-    class Assign(left: ASTNode, right: ASTNode) : ASTNode(left, right, "=")
-
-    class If(left: ASTNode, right: ASTNode) : ASTNode(left, right, "?")
-
-    class Else(left: ASTNode, right: ASTNode) : ASTNode(left, right, ":")
-
-    class Eq(left: ASTNode, right: ASTNode) : ASTNode(left, right, "==") {
+    sealed class BinaryOperation(val left: ASTNode, val right: ASTNode, private val operation: String) : ASTNode() {
         override fun toString(): String {
-            return "($left == $right)"
+            return "$left $operation $right"
         }
+
+        class Plus(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "+")
+
+        class Minus(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "-")
+
+        class Multiply(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "*")
+
+        class Divide(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "/")
+
+        class Assign(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "=")
+
+        class If(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "?")
+
+        class Else(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, ":")
+
+        class Eq(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "==") {
+            override fun toString(): String {
+                return "($left == $right)"
+            }
+        }
+
+        class Lt(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "<")
+
+        class Gt(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, ">")
+
+        class GtEq(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, ">=")
+
+        class LtEq(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "<=")
+
+        class Neq(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "!=")
+
+        class Shr(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, ">>")
+
+        class Shl(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "<<")
+
+        class Or(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "|")
+
+        class And(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "&")
+
+        class Xor(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "^")
+
+        class Mod(left: ASTNode, right: ASTNode) : BinaryOperation(left, right, "%")
     }
-
-    class Lt(left: ASTNode, right: ASTNode) : ASTNode(left, right, "<")
-
-    class Gt(left: ASTNode, right: ASTNode) : ASTNode(left, right, ">")
-
-    class GtEq(left: ASTNode, right: ASTNode) : ASTNode(left, right, ">=")
-
-    class LtEq(left: ASTNode, right: ASTNode) : ASTNode(left, right, "<=")
 
     class ImmediateValue(val value: Int) : ASTNode() {
         override fun toString(): String {
@@ -40,7 +56,7 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
         }
     }
 
-    class Variable(val name: String, val index: ASTNode? = null): ASTNode() {
+    class Variable(val name: String, val index: ASTNode? = null) : ASTNode() {
         override fun toString(): String {
             if (index != null) {
                 return "$name[$index]"
@@ -50,13 +66,13 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
         }
     }
 
-    class Return: ASTNode() {
+    class Return(val value: ASTNode? = null) : ASTNode() {
         override fun toString(): String {
-            return "return"
+            return "return $value"
         }
     }
 
-    class FunctionCall(val name: String, val arguments: List<ASTNode>): ASTNode() {
+    class FunctionCall(val name: String, val arguments: List<ASTNode>) : ASTNode() {
         override fun toString(): String {
             val sb = StringBuilder()
             var i = 0
@@ -71,41 +87,24 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
         }
     }
 
-    class While(left: ASTNode, right: ASTNode) : ASTNode(left, right) {
+    class While(val statement: ASTNode, val condition: ASTNode) : ASTNode() {
         override fun toString(): String {
-            return "$left while($right)"
+            return "$statement while($condition)"
         }
     }
 
-    class Repeat(left: ASTNode, right: ASTNode) : ASTNode(left, right) {
+    class Repeat(val statement: ASTNode, val count: ASTNode) : ASTNode() {
         override fun toString(): String {
-            return "$left repeat($right)"
+            return "$statement repeat($count)"
         }
     }
 
-    class Until(left: ASTNode, right: ASTNode) : ASTNode(left, right) {
+    class Until(val statement: ASTNode, val condition: ASTNode) : ASTNode() {
         override fun toString(): String {
-            return "$left until($right)"
+            return "$statement until($condition)"
         }
     }
 
-    class Neq(left: ASTNode, right: ASTNode) : ASTNode(left, right, "!=")
-
-    class Shr(left: ASTNode, right: ASTNode) : ASTNode(left, right, ">>")
-
-    class Shl(left: ASTNode, right: ASTNode) : ASTNode(left, right, "<<")
-
-    class OrB(left: ASTNode, right: ASTNode) : ASTNode(left, right, "|")
-
-    class OrL(left: ASTNode, right: ASTNode) : ASTNode(left, right, "||")
-
-    class AndB(left: ASTNode, right: ASTNode) : ASTNode(left, right, "&")
-
-    class AndL(left: ASTNode, right: ASTNode) : ASTNode(left, right, "&&")
-
-    class Xor(left: ASTNode, right: ASTNode) : ASTNode(left, right, "^")
-
-    class Mod(left: ASTNode, right: ASTNode) : ASTNode(left, right, "%")
 
     class Neg(val arg: ASTNode) : ASTNode() {
         override fun toString(): String {
@@ -120,4 +119,5 @@ sealed class ASTNode(val left: ASTNode? = null, val right: ASTNode? = null, priv
     }
 
     class Block(val subNodes: List<ASTNode>) : ASTNode()
+
 }

@@ -8,5 +8,5 @@ fun main() {
     {
         a = a + 1;
     } while (a < 10);
-    return 1;
+    return a + 4;
 }

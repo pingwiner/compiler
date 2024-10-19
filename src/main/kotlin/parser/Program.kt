@@ -32,14 +32,13 @@ class Program : ParserContext {
     fun parse(tokens: List<Token>) {
         var i = 0
         while(i < tokens.size) {
-            val token = tokens[i]
-            when(token) {
+            when(val token = tokens[i]) {
                 is Keyword -> {
-                    when(token.type) {
-                        KeywordType.FUN -> {
+                    when(token) {
+                        is Keyword.Fun -> {
                             i = parseFunction(tokens, i)
                         }
-                        KeywordType.VAR -> {
+                        is Keyword.Var -> {
                             i = parseVar(tokens, i)
                         }
                         else -> {
@@ -48,10 +47,10 @@ class Program : ParserContext {
                     }
                 }
                 else -> {
-                    if (token.tokenType != TokenType.END) {
-                        unexpectedTokenError(token)
-                    } else {
+                    if (token is SpecialSymbol.End) {
                         i++
+                    } else {
+                        unexpectedTokenError(token)
                     }
                 }
             }
@@ -76,18 +75,18 @@ class Program : ParserContext {
         }
         val functionName = (tokens[start + 1] as Symbol).content
 
-        if (tokens[start + 2].tokenType != TokenType.L_BRACE) {
+        if (tokens[start + 2] !is SpecialSymbol.LBrace) {
             throw IllegalArgumentException("Function parameters expected " + tokens[start + 2].at())
         }
 
         var i = start + 3
         val argNames = mutableListOf<String>()
-        while(tokens[i].tokenType != TokenType.R_BRACE) {
-            when(tokens[i].tokenType) {
-                TokenType.SYMBOL -> {
+        while(tokens[i] !is SpecialSymbol.RBrace) {
+            when(tokens[i]) {
+                is Symbol -> {
                     argNames.add((tokens[i] as Symbol).content)
                 }
-                TokenType.COMMA -> {}
+                is SpecialSymbol.Comma -> {}
                 else -> {
                     unexpectedTokenError(tokens[i])
                 }
@@ -97,7 +96,7 @@ class Program : ParserContext {
 
         i++
 
-        if (tokens[i].tokenType != TokenType.L_CURL) {
+        if (tokens[i] !is SpecialSymbol.LCurl) {
             throw IllegalArgumentException("Function body expected " + tokens[i].at())
         }
 
@@ -113,71 +112,17 @@ class Program : ParserContext {
     }
 
     private fun parseVar(tokens: List<Token>, start: Int): Int {
-        if ((tokens.size < start + 2) || (tokens[start + 1] !is Symbol)) {
-            throw IllegalArgumentException("Variable name expected " + tokens[start].at(4))
-        }
-        val varName = (tokens[start + 1] as Symbol).content
+        val parseResult = Variable.parse(tokens, start)
+            ?: throw IllegalArgumentException("Syntax error " + tokens[start].at())
+
+        val varName = parseResult.first.name
         if (!hasVariable(varName)) {
-            globalVars[varName] = Variable(varName)
+            globalVars[varName] = parseResult.first
         } else {
             throw IllegalArgumentException("Variable redefinition: $varName " + tokens[start + 1].at())
         }
 
-        when(tokens[start + 2].tokenType) {
-            TokenType.END -> {
-                return start + 2
-            }
-            TokenType.L_SQUARE -> {
-                if (tokens[start + 3].tokenType != TokenType.NUMBER) {
-                    unexpectedTokenError(tokens[start + 3])
-                }
-                val size = (tokens[start + 3] as Number).value
-                if (tokens[start + 4].tokenType != TokenType.R_SQUARE) {
-                    unexpectedTokenError(tokens[start + 4])
-                }
-                if (tokens[start + 5].tokenType != TokenType.END) {
-                    unexpectedTokenError(tokens[start + 5])
-                }
-                globalVars[varName]?.size = size
-                return start + 5
-            }
-            TokenType.OPERATOR -> {
-                val operator = tokens[start + 2] as Operator
-                if (operator.type != OperatorType.ASSIGN) {
-                    unexpectedTokenError(tokens[start + 2])
-                }
-                when(tokens[start + 3].tokenType) {
-                    TokenType.NUMBER -> {
-                        globalVars[varName]?.value = listOf((tokens[start + 3] as Number).value)
-                        if (tokens[start + 4].tokenType != TokenType.END) {
-                            unexpectedTokenError(tokens[start + 4])
-                        }
-                        return start + 4
-                    }
-                    TokenType.L_CURL -> {
-                        val j = findLastCurlBrace(tokens, start + 3)
-                        if (j == -1) {
-                            throw IllegalArgumentException("Missing } " + tokens[start + 3].at())
-                        }
-                        val literal = parseArrayLiteral(tokens.subList(start + 4, j))
-                        globalVars[varName]?.value = literal
-                        globalVars[varName]?.size = literal.size
-                        if (tokens[j + 1].tokenType != TokenType.END) {
-                            unexpectedTokenError(tokens[j + 1])
-                        }
-                        return j + 1
-                    }
-                    else -> {
-                        unexpectedTokenError(tokens[start + 3])
-                        return -1
-                    }
-                }
-            }
-            else -> {
-                unexpectedTokenError(tokens[start + 2])
-                return -1
-            }
-        }
+        return parseResult.second
     }
 
 }

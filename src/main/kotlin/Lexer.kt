@@ -54,17 +54,6 @@ class Lexer {
     }
 
     private fun space(c: Char) {
-        val specialSymbols = mapOf(
-            '(' to TokenType.L_BRACE,
-            ')' to TokenType.R_BRACE,
-            '{' to TokenType.L_CURL,
-            '}' to TokenType.R_CURL,
-            '[' to TokenType.L_SQUARE,
-            ']' to TokenType.R_SQUARE,
-            ';' to TokenType.END,
-            ',' to TokenType.COMMA
-        )
-
         if (c.isLetter()) {
             currentToken.clear()
             currentToken.append(c)
@@ -79,8 +68,12 @@ class Lexer {
             currentToken.append(c)
             state = State.OPERATOR
         } else {
-            specialSymbols[c]?.let { tokenType ->
-                tokens.add(Token(tokenType, line, position))
+            //Try to parse known special symbols
+            val specialSymbol = SpecialSymbol.parse(c, line, position)
+            if (specialSymbol != null) {
+                tokens.add(specialSymbol)
+            } else {
+                //Some unrecognized character. Just skip it.
             }
         }
     }
@@ -111,14 +104,14 @@ class Lexer {
             currentToken.append(c)
         } else {
             val s = currentToken.toString()
-            val operator = parseOperator(s)
-            val keyword = parseKeyword(s)
+            val operator = Operator.parse(s, line, position)
+            val keyword = Keyword.parse(s, line, position)
             if (operator != null) {
                 tokens.add(operator)
             } else if (keyword != null) {
                 tokens.add(keyword)
-                if (keyword.type == KeywordType.RETURN) {
-                    tokens.add(Operator(OperatorType.ASSIGN, line, position))
+                if (keyword is Keyword.Return) {
+                    tokens.add(Operator.Assign(line, position))
                 }
             } else {
                 tokens.add(Symbol(s, line, position - s.length))
@@ -134,7 +127,7 @@ class Lexer {
             currentToken.append(c)
         } else {
             val s = currentToken.toString()
-            val operator = parseOperator(s)
+            val operator = Operator.parse(s, line, position)
             if (operator != null) {
                 tokens.add(operator)
             } else {
@@ -150,20 +143,6 @@ class Lexer {
         for (token in tokens) {
             println(token)
         }
-    }
-
-    private fun parseKeyword(s: String) : Keyword? {
-        for (k in KeywordType.entries) {
-            if (s == k.value) return Keyword(k, line, position - k.value.length)
-        }
-        return null
-    }
-
-    private fun parseOperator(s: String) : Operator? {
-        for (k in OperatorType.entries) {
-            if (s == k.value) return Operator(k, line, position - k.value.length)
-        }
-        return null
     }
 
 }
