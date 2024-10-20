@@ -77,23 +77,25 @@ fun convertToNodes(tokens: List<Token>): List<Node> {
     return nodes
 }
 
-fun findLastCurlBrace(tokens: List<Token>, start: Int): Int {
+const val NOT_FOUND = -1
+
+inline fun <reified U: SpecialSymbol, reified V: SpecialSymbol> findComplementBraceToken(tokens: List<Token>, start: Int): Int {
     val stack = Stack<Int>()
     var i = start
     while (i < tokens.size) {
-        if (tokens[i] is SpecialSymbol.LCurl) {
+        if (tokens[i] is U) {
             stack.push(1)
         }
-        if (tokens[i] is SpecialSymbol.RCurl) {
+        if (tokens[i] is V) {
             stack.pop()
             if (stack.isEmpty()) return i
         }
         i++
     }
-    return -1
+    return NOT_FOUND
 }
 
-inline fun <reified U: SpecialSymbol, reified V: SpecialSymbol> findComplementBrace(nodes: List<Node>, start: Int): Int {
+inline fun <reified U: SpecialSymbol, reified V: SpecialSymbol> findComplementBraceNode(nodes: List<Node>, start: Int): Int {
     val stack = Stack<Int>()
     var i = start
     while (i < nodes.size) {
@@ -106,7 +108,7 @@ inline fun <reified U: SpecialSymbol, reified V: SpecialSymbol> findComplementBr
         }
         i++
     }
-    return -1
+    return NOT_FOUND
 }
 
 fun findNextComma(nodes: List<Node>, start: Int): Int {
@@ -123,7 +125,7 @@ fun findNextComma(nodes: List<Node>, start: Int): Int {
         }
         i += 1
     }
-    return -1
+    return NOT_FOUND
 }
 
 fun unexpectedTokenError(token: Token) {
@@ -136,6 +138,22 @@ fun parseArrayLiteral(tokens: List<Token>) : List<Int> {
         when (token) {
             is Number -> {
                 result.add(token.value)
+            }
+            is SpecialSymbol.Comma -> {}
+            else -> {
+                unexpectedTokenError(token)
+            }
+        }
+    }
+    return result
+}
+
+fun parseFunctionArguments(tokens: List<Token>): List<String> {
+    val result = mutableListOf<String>()
+    for (token in tokens) {
+        when (token) {
+            is Symbol -> {
+                result.add(token.content)
             }
             is SpecialSymbol.Comma -> {}
             else -> {

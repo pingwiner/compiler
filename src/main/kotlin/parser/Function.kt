@@ -65,12 +65,12 @@ class Function(val name: String, val params: List<String>) {
         val result = mutableListOf<Node>()
         while (i < nodes.size) {
             if (nodes[i].value is SpecialSymbol.LBrace && (i > 0) && nodes[i - 1].value is Symbol) {
-                val j = findComplementBrace<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(nodes, i)
-                if (j == -1) {
+                val j = findComplementBraceNode<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(nodes, i)
+                if (j == NOT_FOUND) {
                     throw IllegalArgumentException(") not found " + nodes[i].value?.at())
                 }
                 result.last().subNodes = nodes.subList(i + 1, j)
-                result.last().isFunction = true
+                result.last().type = NodeType.Function
                 i = j + 1
             } else {
                 result.add(nodes[i])
@@ -85,12 +85,12 @@ class Function(val name: String, val params: List<String>) {
         val result = mutableListOf<Node>()
         while (i < nodes.size) {
             if (nodes[i].value is SpecialSymbol.LSquare && (i > 0) && nodes[i - 1].value is Symbol) {
-                val j = findComplementBrace<SpecialSymbol.LSquare, SpecialSymbol.RSquare>(nodes, i)
-                if (j == -1) {
+                val j = findComplementBraceNode<SpecialSymbol.LSquare, SpecialSymbol.RSquare>(nodes, i)
+                if (j == NOT_FOUND) {
                     throw IllegalArgumentException("] not found " + nodes[i].value?.at())
                 }
                 result.last().subNodes = nodes.subList(i + 1, j)
-                result.last().isArrayAccess = true
+                result.last().type = NodeType.ArrayAccess
                 i = j + 1
             } else {
                 result.add(nodes[i])
@@ -106,8 +106,8 @@ class Function(val name: String, val params: List<String>) {
         while(i < nodes.size) {
             val n = nodes[i]
             if (n.value is SpecialSymbol.LBrace) {
-                val j = findComplementBrace<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(nodes, i)
-                if (j == -1) {
+                val j = findComplementBraceNode<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(nodes, i)
+                if (j == NOT_FOUND) {
                     throw IllegalStateException(") not found " + n.value?.at())
                 }
                 val subnodes = wrapBraces(nodes.subList(i + 1, j))
@@ -134,13 +134,13 @@ class Function(val name: String, val params: List<String>) {
         while(i < nodes.size) {
             val n = nodes[i]
             if (n.value is SpecialSymbol.LCurl) {
-                val j = findComplementBrace<SpecialSymbol.LCurl, SpecialSymbol.RCurl>(nodes, i)
-                if (j == -1) {
+                val j = findComplementBraceNode<SpecialSymbol.LCurl, SpecialSymbol.RCurl>(nodes, i)
+                if (j == NOT_FOUND) {
                     throw IllegalStateException("} not found " + n.value?.at())
                 }
                 val subnodes = nodes.subList(i + 1, j)
                 val combined = Node(subnodes)
-                combined.isBlock = true
+                combined.type = NodeType.Block
                 result.add(combined)
                 i = j + 1
             } else {
@@ -180,7 +180,7 @@ class Function(val name: String, val params: List<String>) {
                     }
                 }
             } else {
-                if (!n.isBlock) {
+                if (n.type != NodeType.Block) {
                     val wrapResult = wrapTokensWithPriority(n.subNodes!!, priority)
                     wrapped = wrapped or wrapResult.wrapped
                     result.add(Node(wrapResult.nodes))
@@ -235,19 +235,21 @@ class Function(val name: String, val params: List<String>) {
             is Number -> ASTNode.ImmediateValue((node.value as Number).value)
             is Symbol -> {
                 val name = (node.value as Symbol).content
-                if (!node.isFunction) {
+                if (node.type == NodeType.Function) {
+                    //Parse function call
+                    val arguments = parseFunctionCallArguments(node.subNodes ?: listOf())
+                    val intFunc = parseInternalFunction(node, name, arguments)
+                    if (intFunc != null) return intFunc
+                    context.useFunction(name)
+                    ASTNode.FunctionCall(name, arguments)
+                } else {
+                    //Parse variable
                     if (checkVariableExistence) {
                         if (!variableExists(name)) {
                             throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
                         }
                     }
                     parseVar(name, node)
-                } else {
-                    val arguments = parseFunctionArguments(node.subNodes ?: listOf())
-                    val intFunc = parseInternalFunction(node, name, arguments)
-                    if (intFunc != null) return intFunc
-                    context.useFunction(name)
-                    ASTNode.FunctionCall(name, arguments)
                 }
             }
             is Keyword -> {
@@ -258,27 +260,25 @@ class Function(val name: String, val params: List<String>) {
                 }
             }
             null -> {
-                if (node.subNodes != null) {
-                    if (node.isBlock) {
-                        parseBlock(node.subNodes!!)
+                node.subNodes?.let { subNodes ->
+                    if (node.type == NodeType.Block) {
+                        parseBlock(subNodes)
                     } else {
-                        nodesToAst(node.subNodes!!)
+                        nodesToAst(subNodes)
                     }
-                } else {
-                    throw IllegalArgumentException("Bad token $node")
-                }
+                } ?: throw IllegalArgumentException("Bad token $node")
             }
             else -> { throw IllegalArgumentException("Syntax error " + node.value?.at())}
         }
     }
 
-    private fun parseFunctionArguments(nodes: List<Node>): List<ASTNode> {
+    private fun parseFunctionCallArguments(nodes: List<Node>): List<ASTNode> {
         val result = mutableListOf<ASTNode>()
         if (nodes.isEmpty()) return result
         var i = 0
         while (i < nodes.size) {
             var j = findNextComma(nodes, i)
-            if (j == -1) {
+            if (j == NOT_FOUND) {
                 j = nodes.size
             }
             result.add(parseStatementNodes(nodes.subList(i, j)))

@@ -2,12 +2,17 @@ package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.Token
 
+enum class NodeType {
+    Regular,
+    Function,
+    ArrayAccess,
+    Block
+}
+
 class Node() {
     var value: Token? = null
     var subNodes: List<Node>? = null
-    var isFunction = false
-    var isArrayAccess = false
-    var isBlock = false
+    var type = NodeType.Regular
 
     constructor(token: Token) : this() {
         value = token

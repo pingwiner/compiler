@@ -2,11 +2,11 @@
 var globalA = {1, 2, 3, 4, 5, 6};
 var globalB = 0x100;
 
-fun main() {
+fun main(arg1, arg2) {
     a = globalA[1];
-    a = a + globalB;
+    a = a + globalB + arg1;
     {
-        a = a + 1;
+        a = a + 1 - arg2;
     } while (a < 10);
-    return a + 4;
+    return a + 2;
 }

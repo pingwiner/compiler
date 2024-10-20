@@ -79,34 +79,25 @@ class Program : ParserContext {
             throw IllegalArgumentException("Function parameters expected " + tokens[start + 2].at())
         }
 
-        var i = start + 3
-        val argNames = mutableListOf<String>()
-        while(tokens[i] !is SpecialSymbol.RBrace) {
-            when(tokens[i]) {
-                is Symbol -> {
-                    argNames.add((tokens[i] as Symbol).content)
-                }
-                is SpecialSymbol.Comma -> {}
-                else -> {
-                    unexpectedTokenError(tokens[i])
-                }
-            }
-            i++
+        val closingBracePosition = findComplementBraceToken<SpecialSymbol.LBrace, SpecialSymbol.RBrace>(tokens, start + 2)
+        if (closingBracePosition == NOT_FOUND) {
+            throw IllegalArgumentException(") not found " + tokens[start + 2].at())
         }
 
-        i++
+        val argNames = parseFunctionArguments(tokens.subList(start + 3, closingBracePosition))
+        val bodyStartingPosition = closingBracePosition + 1
 
-        if (tokens[i] !is SpecialSymbol.LCurl) {
-            throw IllegalArgumentException("Function body expected " + tokens[i].at())
+        if (tokens[bodyStartingPosition] !is SpecialSymbol.LCurl) {
+            throw IllegalArgumentException("Function body expected " + tokens[bodyStartingPosition].at())
         }
 
-        val functionEndPosition = findLastCurlBrace(tokens, i)
-        if (functionEndPosition == -1) {
+        val functionEndPosition = findComplementBraceToken<SpecialSymbol.LCurl, SpecialSymbol.RCurl>(tokens, bodyStartingPosition)
+        if (functionEndPosition == NOT_FOUND) {
             throw IllegalArgumentException("Missing } for function $functionName")
         }
 
         val function = Function(functionName, argNames)
-        function.parse(tokens.subList(i + 1, functionEndPosition), this)
+        function.parse(tokens.subList(bodyStartingPosition + 1, functionEndPosition), this)
         functions.add(function)
         return functionEndPosition + 1
     }

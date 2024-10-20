@@ -71,7 +71,7 @@ class Variable(val name: String) {
                 .expect<Number>().let {
                     if (!it.valid) return null
                     val result = Variable(it.get<Symbol>(1).content)
-                    val j = findLastCurlBrace(tokens, start + 3)
+                    val j = findComplementBraceToken<SpecialSymbol.LCurl, SpecialSymbol.RCurl>(tokens, start + 3)
                     if (j == -1) return null
                     val literal = parseArrayLiteral(tokens.subList(start + 4, j))
                     result.value = literal
