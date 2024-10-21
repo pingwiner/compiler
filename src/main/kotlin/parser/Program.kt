@@ -1,7 +1,6 @@
 package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
-import org.pingwiner.compiler.Number
 
 class Program : ParserContext {
     val functions = mutableListOf<Function>()
