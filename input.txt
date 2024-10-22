@@ -7,6 +7,6 @@ fun main(arg1, arg2) {
     a = a + globalB + arg1;
     {
         a = a + 1 - arg2;
-    } while (a < 10);
-    return a + 2;
+    } while (3 > 9);
+    return (2 >> 1) + a;
 }

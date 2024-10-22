@@ -3,9 +3,15 @@ package org.pingwiner.compiler.optimizer
 import org.pingwiner.compiler.parser.ASTNode
 
 class Optimizer(var root: ASTNode) {
+    var optimizationsCount = 0
 
     fun run(): ASTNode {
-        return optimizeArithmeticOperationsWithImmediates(root)
+        var node = root
+        do {
+            optimizationsCount = 0
+            node = optimizeArithmeticOperationsWithImmediates(node)
+        } while (optimizationsCount > 0)
+        return node
     }
 
     private fun optimizeArithmeticOperationsWithImmediates(node: ASTNode) : ASTNode {
@@ -20,30 +26,63 @@ class Optimizer(var root: ASTNode) {
                     )
                 }
             }
-            is ASTNode.Block -> TODO()
-            is ASTNode.FunctionCall -> TODO()
-            is ASTNode.ImmediateValue -> TODO()
-            is ASTNode.Inv -> TODO()
-            is ASTNode.Neg -> TODO()
-            is ASTNode.Repeat -> TODO()
-            is ASTNode.Return -> TODO()
-            is ASTNode.Until -> TODO()
-            is ASTNode.Variable -> TODO()
-            is ASTNode.While -> TODO()
+            is ASTNode.Block -> {
+                val newSubNodes = mutableListOf<ASTNode>()
+                for (subNode in node.subNodes) {
+                    newSubNodes.add(optimizeArithmeticOperationsWithImmediates(subNode))
+                }
+                return (ASTNode.Block(newSubNodes))
+            }
+            is ASTNode.FunctionCall -> {
+                val newArguments = mutableListOf<ASTNode>()
+                for (arg in node.arguments) {
+                    newArguments.add(optimizeArithmeticOperationsWithImmediates(arg))
+                }
+                return ASTNode.FunctionCall(node.name, newArguments)
+            }
+            is ASTNode.ImmediateValue -> return node
+            is ASTNode.Inv -> return ASTNode.Inv(optimizeArithmeticOperationsWithImmediates(node.arg))
+            is ASTNode.Neg -> return ASTNode.Neg(optimizeArithmeticOperationsWithImmediates(node.arg))
+            is ASTNode.Repeat -> return ASTNode.Repeat(
+                optimizeArithmeticOperationsWithImmediates(node.statement),
+                optimizeArithmeticOperationsWithImmediates(node.count)
+            )
+            is ASTNode.Return -> {
+                node.value?.let {
+                    return(ASTNode.Return(optimizeArithmeticOperationsWithImmediates(it)))
+                } ?: return node
+            }
+            is ASTNode.Until -> return ASTNode.Until(
+                optimizeArithmeticOperationsWithImmediates(node.statement),
+                optimizeArithmeticOperationsWithImmediates(node.condition)
+            )
+            is ASTNode.Variable -> {
+                node.index?.let { index ->
+                    return ASTNode.Variable(node.name, optimizeArithmeticOperationsWithImmediates(index))
+                } ?: return node
+            }
+            is ASTNode.While -> return ASTNode.While(
+                optimizeArithmeticOperationsWithImmediates(node.statement),
+                optimizeArithmeticOperationsWithImmediates(node.condition)
+            )
         }
     }
 
     private fun calculate(node: ASTNode.BinaryOperation, left: Int, right: Int): ASTNode {
+        when (node) {
+            is ASTNode.BinaryOperation.If -> return node
+            is ASTNode.BinaryOperation.Else -> return node
+            is ASTNode.BinaryOperation.Assign -> throw IllegalArgumentException("Illegal operation: $left = $right")
+            else -> { optimizationsCount++ }
+        }
+
         return when(node) {
             is ASTNode.BinaryOperation.Plus -> ASTNode.ImmediateValue(left + right)
             is ASTNode.BinaryOperation.And -> ASTNode.ImmediateValue(left and right)
-            is ASTNode.BinaryOperation.Assign -> throw IllegalArgumentException("Illegal operation: $left = $right")
             is ASTNode.BinaryOperation.Divide -> ASTNode.ImmediateValue(left / right)
-            is ASTNode.BinaryOperation.Else -> node
             is ASTNode.BinaryOperation.Eq -> boolNode(left == right)
             is ASTNode.BinaryOperation.Gt -> boolNode(left > right)
             is ASTNode.BinaryOperation.GtEq -> boolNode(left >= right)
-            is ASTNode.BinaryOperation.If -> node
             is ASTNode.BinaryOperation.Lt -> boolNode(left < right)
             is ASTNode.BinaryOperation.LtEq -> boolNode(left <= right)
             is ASTNode.BinaryOperation.Minus -> ASTNode.ImmediateValue(left - right)
@@ -54,6 +93,7 @@ class Optimizer(var root: ASTNode) {
             is ASTNode.BinaryOperation.Shl -> ASTNode.ImmediateValue(left shl right)
             is ASTNode.BinaryOperation.Shr -> ASTNode.ImmediateValue(left shr right)
             is ASTNode.BinaryOperation.Xor -> ASTNode.ImmediateValue(left xor right)
+            else -> throw Exception("WTF")
         }
     }
 

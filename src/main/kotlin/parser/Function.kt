@@ -2,6 +2,7 @@ package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
 import org.pingwiner.compiler.Number
+import org.pingwiner.compiler.optimizer.Optimizer
 
 class Function(val name: String, val params: List<String>) {
     private lateinit var context: ParserContext
@@ -25,6 +26,10 @@ class Function(val name: String, val params: List<String>) {
         this.context = context
         val nodes = convertToNodes(tokens)
         root = parseBlock(nodes)
+        root?.let {
+            val optimizer = Optimizer(it)
+            root = optimizer.run()
+        }
     }
 
     private fun parseBlock(nodes: List<Node>) : ASTNode {
