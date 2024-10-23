@@ -248,13 +248,19 @@ class Function(val name: String, val params: List<String>) {
                     context.useFunction(name)
                     ASTNode.FunctionCall(name, arguments)
                 } else {
-                    //Parse variable
-                    if (checkVariableExistence) {
-                        if (!variableExists(name)) {
-                            throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
+                    //Try to parse constant
+                    val const = context.getConstant(name)
+                    if (const != null) {
+                        ASTNode.ImmediateValue(const)
+                    } else {
+                        //Parse variable
+                        if (checkVariableExistence) {
+                            if (!variableExists(name)) {
+                                throw IllegalArgumentException("Unknown variable $name " + node.value?.at())
+                            }
                         }
+                        parseVar(name, node)
                     }
-                    parseVar(name, node)
                 }
             }
             is Keyword -> {

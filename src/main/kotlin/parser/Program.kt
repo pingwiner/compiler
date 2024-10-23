@@ -1,10 +1,12 @@
 package org.pingwiner.compiler.parser
 
 import org.pingwiner.compiler.*
+import org.pingwiner.compiler.Number
 
 class Program : ParserContext {
     val functions = mutableListOf<Function>()
     val globalVars = mutableMapOf<String, Variable>()
+    val constants = mutableMapOf<String, Int>()
     val useFunc = mutableMapOf<String, Int>()
 
     override fun useFunction(name: String) {
@@ -23,6 +25,10 @@ class Program : ParserContext {
         return globalVars[name]?.isArray() == true
     }
 
+    override fun getConstant(name: String): Int? {
+        return constants[name]
+    }
+
     override fun arraySize(name: String): Int {
         if (!hasArray(name)) return 0
         return globalVars[name]?.size ?: 0
@@ -39,6 +45,9 @@ class Program : ParserContext {
                         }
                         is Keyword.Var -> {
                             i = parseVar(tokens, i)
+                        }
+                        is Keyword.Const -> {
+                            i = parseConst(tokens, i)
                         }
                         else -> {
                             unexpectedTokenError(token)
@@ -113,6 +122,21 @@ class Program : ParserContext {
         }
 
         return parseResult.second
+    }
+
+    private fun parseConst(tokens: List<Token>, start: Int): Int {
+        Match(tokens, start)
+            .expect<Keyword.Const>()
+            .expect<Symbol>()
+            .expect<Operator.Assign>()
+            .expect<Number>()
+            .expect<SpecialSymbol.End>().let {
+                if (!it.valid) throw IllegalArgumentException("Syntax error " + tokens[start].at())
+                val name = it.get<Symbol>(1).content
+                val value = it.get<Number>(3).value
+                constants[name] = value
+                return it.next
+            }
     }
 
 }

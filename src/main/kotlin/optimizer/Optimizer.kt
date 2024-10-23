@@ -3,7 +3,7 @@ package org.pingwiner.compiler.optimizer
 import org.pingwiner.compiler.parser.ASTNode
 
 class Optimizer(var root: ASTNode) {
-    var optimizationsCount = 0
+    private var optimizationsCount = 0
 
     fun run(): ASTNode {
         var node = root

@@ -29,6 +29,7 @@ sealed class Keyword(line: Int, position: Int) : Token(line, position) {
                 "return" -> Return(line, position)
                 "fun" -> Fun(line, position)
                 "var" -> Var(line, position)
+                "const" -> Const(line, position)
                 else -> null
             }
         }
@@ -37,6 +38,7 @@ sealed class Keyword(line: Int, position: Int) : Token(line, position) {
     class Return(line: Int, position: Int) : Keyword(line, position)
     class Fun(line: Int, position: Int) : Keyword(line, position)
     class Var(line: Int, position: Int) : Keyword(line, position)
+    class Const(line: Int, position: Int) : Keyword(line, position)
 }
 
 
