@@ -6,7 +6,7 @@ fun main() {
     val reader = Reader("input.txt")
     val lexer = Lexer()
     lexer.scan(reader.content)
-    lexer.printTokens()
+    //lexer.printTokens()
     val parser = Parser()
     parser.parse(lexer.tokens)
 }

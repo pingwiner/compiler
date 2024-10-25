@@ -2,29 +2,35 @@ package org.pingwiner.compiler.parser
 
 sealed class ASTNode {
 
-    enum class Operation {
-        PLUS,
-        MINUS,
-        MULTIPLY,
-        DIVIDE,
-        ASSIGN,
-        IF,
-        ELSE,
-        EQ,
-        LT,
-        GT,
-        GTEQ,
-        LTEQ,
-        NEQ,
-        SHR,
-        SHL,
-        OR,
-        AND,
-        XOR,
-        MOD
+    enum class Operation(val op: String) {
+        PLUS("+"),
+        MINUS("-"),
+        MULTIPLY("*"),
+        DIVIDE("/"),
+        ASSIGN("="),
+        IF("?"),
+        ELSE(":"),
+        EQ("=="),
+        LT("<"),
+        GT(">"),
+        GTEQ(">="),
+        LTEQ("<="),
+        NEQ("!="),
+        SHR(">>"),
+        SHL("<<"),
+        OR("|"),
+        AND("&"),
+        XOR("^"),
+        MOD("%");
+
+        override fun toString(): String {
+            return op
+        }
     }
 
-    sealed class BinaryOperation(val left: ASTNode, val right: ASTNode, private val operation: Operation) : ASTNode() {
+    open fun isFinal(): Boolean = false
+
+    sealed class BinaryOperation(val left: ASTNode, val right: ASTNode, val operation: Operation) : ASTNode() {
         override fun toString(): String {
             return "$left $operation $right"
         }
@@ -82,6 +88,9 @@ sealed class ASTNode {
         override fun toString(): String {
             return "$value"
         }
+
+        override fun isFinal(): Boolean = true
+
     }
 
     class Variable(val name: String, val index: ASTNode? = null) : ASTNode() {
@@ -92,6 +101,8 @@ sealed class ASTNode {
                 return name
             }
         }
+
+        override fun isFinal(): Boolean = true
     }
 
     class Return(val value: ASTNode? = null) : ASTNode() {

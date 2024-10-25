@@ -3,12 +3,17 @@ package org.pingwiner.compiler.codegen
 import org.pingwiner.compiler.parser.ASTNode
 
 class Generator {
+
+    companion object {
+        var regCount = 0
+    }
+
     val operations = mutableListOf<Operation>()
 
-    private fun processNode(node: ASTNode) {
+    fun processNode(node: ASTNode): String {
         when(node) {
             is ASTNode.BinaryOperation -> {
-                processBinaryOperation(node)
+                return processBinaryOperation(node)
             }
             is ASTNode.Block -> {
                 for (subNode in node.subNodes) {
@@ -21,7 +26,8 @@ class Generator {
                 }
                 //generate function call
             }
-            is ASTNode.ImmediateValue -> {}
+            is ASTNode.ImmediateValue -> { return node.toString() }
+            is ASTNode.Variable -> { return node.toString() }
             is ASTNode.Inv -> {}
             is ASTNode.Neg -> {}
             is ASTNode.Repeat -> {
@@ -41,16 +47,22 @@ class Generator {
                 processNode(node.statement)
                 processNode(node.condition)
             }
-            else -> { }
+            else -> ""
         }
+        return ""
     }
 
-    private fun processBinaryOperation(node: ASTNode.BinaryOperation) {
-        when (node) {
-            is ASTNode.BinaryOperation.Plus -> {
+    private fun processBinaryOperation(node: ASTNode.BinaryOperation): String {
+        if (node is ASTNode.BinaryOperation.Assign) return ""
+        val reg = "R${regCount++}"
 
-            }
-            else -> {}
+        if (node.isFinal()) {
+            return this.toString()
+        } else {
+            val leftVal = processNode(node.left)
+            val rightVal = processNode(node.right)
+            println("$reg = $leftVal ${node.operation} $rightVal")
+            return reg
         }
     }
 }
