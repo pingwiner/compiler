@@ -1,21 +1,86 @@
 package org.pingwiner.compiler.codegen
 
-sealed class Operand {
-    class Immediate(value: Int) : Operand()
-    class Memory(address: Int) : Operand()
+import org.pingwiner.compiler.parser.ASTNode
+
+enum class OperandType {
+    ImmediateValue,
+    Register,
+    LocalVariable,
+    GlobalVariable
+}
+
+data class Operand(
+    val name: String,
+    val type: OperandType,
+    val value: Int? = null
+) {
+    fun isZero(): Boolean {
+        return type == OperandType.ImmediateValue && value == 0
+    }
+
+    override fun toString(): String {
+        if (type == OperandType.ImmediateValue) {
+            return "$value"
+        } else {
+            return name
+        }
+    }
+}
+
+enum class Operator(val op: String) {
+    PLUS("+"),
+    MINUS("-"),
+    MULTIPLY("*"),
+    DIVIDE("/"),
+    EQ("=="),
+    LT("<"),
+    GT(">"),
+    GTEQ(">="),
+    LTEQ("<="),
+    NEQ("!="),
+    SHR(">>"),
+    SHL("<<"),
+    OR("|"),
+    AND("&"),
+    XOR("^"),
+    MOD("%");
+
+    companion object {
+        fun from(node: ASTNode.BinaryOperation): Operator {
+            return when(node) {
+                is ASTNode.BinaryOperation.Plus -> PLUS
+                is ASTNode.BinaryOperation.And -> AND
+                is ASTNode.BinaryOperation.Assign -> TODO()
+                is ASTNode.BinaryOperation.Divide -> DIVIDE
+                is ASTNode.BinaryOperation.Else -> TODO()
+                is ASTNode.BinaryOperation.Eq -> EQ
+                is ASTNode.BinaryOperation.Gt -> GT
+                is ASTNode.BinaryOperation.GtEq -> GTEQ
+                is ASTNode.BinaryOperation.If -> TODO()
+                is ASTNode.BinaryOperation.Lt -> LT
+                is ASTNode.BinaryOperation.LtEq -> LTEQ
+                is ASTNode.BinaryOperation.Minus -> MINUS
+                is ASTNode.BinaryOperation.Mod -> MOD
+                is ASTNode.BinaryOperation.Multiply -> MULTIPLY
+                is ASTNode.BinaryOperation.Neq -> NEQ
+                is ASTNode.BinaryOperation.Or -> OR
+                is ASTNode.BinaryOperation.Shl -> SHL
+                is ASTNode.BinaryOperation.Shr -> SHR
+                is ASTNode.BinaryOperation.Xor -> XOR
+            }
+        }
+    }
 }
 
 sealed class Operation {
-    class Ld(arg: Operand) : Operation()
-    class Add(arg: Operand) : Operation()
-    class Sub(arg: Operand) : Operation()
-    class And(arg: Operand) : Operation()
-    class Or(arg: Operand) : Operation()
-    class Xor(arg: Operand) : Operation()
-    data object Neg : Operation()
-    data object Cpl : Operation()
-    class Call(arg: Operand.Memory)
-    data object Ret : Operation()
-    class Inc(arg: Operand) : Operation()
-    class Dec(arg: Operand) : Operation()
+    class BinaryOperation(val result: Operand, val operand1: Operand, val operand2: Operand, val operator: Operator) : Operation() {
+        override fun toString(): String {
+            return result.name + " = " + operand1 + " " + operator.op + " " + operand2
+        }
+    }
+    class Assignment(val result: Operand, val operand1: Operand): Operation() {
+        override fun toString(): String {
+            return result.name + " = " + operand1
+        }
+    }
 }

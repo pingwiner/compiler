@@ -10,6 +10,7 @@ class Parser {
         program.parse(tokens)
         val generator = Generator()
         generator.processNode(program.functions[0].root!!)
+        generator.printOperations()
         println("")
     }
 
