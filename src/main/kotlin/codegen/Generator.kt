@@ -12,13 +12,15 @@ class Generator {
     val operations = mutableListOf<Operation>()
 
     fun processNode(node: ASTNode): Operand {
-        when(node) {
+        return when (node) {
             is ASTNode.BinaryOperation -> {
                 return processBinaryOperation(node)
             }
+
             is ASTNode.ImmediateValue -> {
                 return Operand(node.value.toString(), OperandType.ImmediateValue, node.value)
             }
+
             is ASTNode.Variable -> {
                 if (varValues.contains(node.name)) {
                     val v: Int = varValues[node.name]!!
@@ -27,12 +29,16 @@ class Generator {
                     return Operand(node.name, OperandType.LocalVariable)
                 }
             }
+
             is ASTNode.Block -> {
                 var result: Operand? = null
                 for (subNode in node.subNodes) {
                     result = processNode(subNode)
                 }
                 return result!!
+            }
+            is ASTNode.Return -> {
+                return processReturn(node)
             }
             else -> TODO()
         }
@@ -63,7 +69,13 @@ class Generator {
                         return result
                     }
                 } else {
-                    throw IllegalStateException("WTF")
+                    val result = Operand(node.left.name, OperandType.LocalVariable)
+                    val operand = processNode(node.right)
+                    operations.add(Operation.Assignment(result, operand))
+                    operand.value?.let {
+                        varValues[node.left.name] = it
+                    }                    
+                    return result
                 }
             } else {
                 throw IllegalStateException("WTF")
@@ -135,5 +147,54 @@ class Generator {
         for (op in operations) {
             println(op.toString())
         }
+    }
+
+    fun removeUselessOperations() {
+        if (operations.isEmpty()) return
+        val usedVars = mutableSetOf<String>()
+        for (op in operations) {
+            when(op) {
+                is Operation.Assignment -> {
+                    if (op.operand.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.operand.name)
+                    }
+                }
+                is Operation.BinaryOperation -> {
+                    if (op.operand1.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.operand1.name)
+                    }
+                    if (op.operand2.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.operand2.name)
+                    }
+                }
+                is Operation.Return -> {
+                    if (op.result.name.isNotBlank()) {
+                        usedVars.add(op.result.name)
+                    }
+                }
+            }
+        }
+        val newOperations = mutableListOf<Operation>()
+        for (op in operations) {
+            if (usedVars.contains(op.result.name)) {
+                newOperations.add(op)
+            }
+        }
+        if (newOperations.last() != operations.last()) {
+            newOperations.add(operations.last())
+        }
+        operations.clear()
+        operations.addAll(newOperations)
+    }
+
+    private fun processReturn(node: ASTNode.Return) : Operand {
+        node.value?.let {
+            val result = processNode(it)
+            operations.add(Operation.Return(result))
+            return result
+        }
+        val result = Operand("", OperandType.ImmediateValue, 0)
+        operations.add(Operation.Return(result))
+        return result
     }
 }

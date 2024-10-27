@@ -72,15 +72,20 @@ enum class Operator(val op: String) {
     }
 }
 
-sealed class Operation {
-    class BinaryOperation(val result: Operand, val operand1: Operand, val operand2: Operand, val operator: Operator) : Operation() {
+sealed class Operation(val result: Operand) {
+    class BinaryOperation(result: Operand, val operand1: Operand, val operand2: Operand, val operator: Operator) : Operation(result) {
         override fun toString(): String {
             return result.name + " = " + operand1 + " " + operator.op + " " + operand2
         }
     }
-    class Assignment(val result: Operand, val operand1: Operand): Operation() {
+    class Assignment(result: Operand, val operand: Operand): Operation(result) {
         override fun toString(): String {
-            return result.name + " = " + operand1
+            return result.name + " = " + operand
+        }
+    }
+    class Return(result: Operand) : Operation(result) {
+        override fun toString(): String {
+            return "return " + result.name
         }
     }
 }

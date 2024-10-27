@@ -2,5 +2,6 @@
 
 fun main(arg1, arg2) {
     a = 1;
-    1 + (2 - a) * 3 + arg1 / 2 + a >> arg2 & (a << 4);
+    b = 1 + (2 - a) * 3 + arg1 / 2 + a >> arg2 & (a << 4);
+    return b
 }
