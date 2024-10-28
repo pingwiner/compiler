@@ -4,7 +4,7 @@ import org.pingwiner.compiler.parser.ASTNode
 
 class Generator {
     val varValues = mutableMapOf<String, Int>()
-
+    val varRefs = mutableMapOf<String, String>()
     companion object {
         var regCount = 0
     }
@@ -25,6 +25,9 @@ class Generator {
                 if (varValues.contains(node.name)) {
                     val v: Int = varValues[node.name]!!
                     return Operand(v.toString(), OperandType.ImmediateValue, v)
+                } else if (varRefs.contains(node.name)) {
+                    val ref = varRefs[node.name]!!
+                    return Operand(ref, OperandType.Register)
                 } else {
                     return Operand(node.name, OperandType.LocalVariable)
                 }
@@ -50,11 +53,13 @@ class Generator {
             if (node.left is ASTNode.Variable) {
                 if (node.right is ASTNode.ImmediateValue) {
                     varValues[node.left.name] = node.right.value
+                    varRefs.remove(node.left.name)
                     val result = Operand(node.left.name, OperandType.LocalVariable, node.right.value)
                     val operand = Operand(node.right.value.toString(), OperandType.ImmediateValue, node.right.value)
                     operations.add(Operation.Assignment(result, operand))
                     return result
                 } else if (node.right is ASTNode.Variable) {
+                    varRefs.remove(node.left.name)
                     if (varValues.contains(node.right.name)) {
                         varValues[node.left.name] = varValues[node.right.name]!!
                         val result = Operand(node.left.name, OperandType.LocalVariable)
@@ -72,9 +77,14 @@ class Generator {
                     val result = Operand(node.left.name, OperandType.LocalVariable)
                     val operand = processNode(node.right)
                     operations.add(Operation.Assignment(result, operand))
-                    operand.value?.let {
-                        varValues[node.left.name] = it
-                    }                    
+                    if (operand.value != null) {
+                        varValues[node.left.name] = operand.value
+                        varRefs.remove(node.left.name)
+                    } else {
+                        if (operand.type == OperandType.Register) {
+                            varRefs[node.left.name] = operand.name
+                        }
+                    }
                     return result
                 }
             } else {
@@ -155,6 +165,7 @@ class Generator {
         for (op in operations) {
             when(op) {
                 is Operation.Assignment -> {
+                    //usedVars.remove(op.result.name)
                     if (op.operand.type != OperandType.ImmediateValue) {
                         usedVars.add(op.operand.name)
                     }
