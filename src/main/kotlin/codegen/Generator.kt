@@ -1,17 +1,44 @@
 package org.pingwiner.compiler.codegen
 
 import org.pingwiner.compiler.parser.ASTNode
+import org.pingwiner.compiler.parser.Program
+import org.pingwiner.compiler.parser.Function
 
-class Generator {
+class Generator(val program: Program) {
     val varValues = mutableMapOf<String, Int>()
     val varRefs = mutableMapOf<String, String>()
     companion object {
         var regCount = 0
     }
 
-    val operations = mutableListOf<Operation>()
+    val irFunctions = mutableMapOf<String, IRFunction>()
 
-    fun processNode(node: ASTNode): Operand {
+    var operations = mutableListOf<Operation>()
+    lateinit var currentFunction: Function
+    var usedVars = mutableSetOf<String>()
+
+    fun generate() {
+        for (function in program.functions) {
+            currentFunction = function
+            operations = mutableListOf()
+            usedVars = mutableSetOf()
+            processNode(currentFunction.root!!)
+            removeUselessOperations()
+            val usedLocalVars = mutableListOf<String>()
+            for (v in currentFunction.vars) {
+                if (usedVars.contains(v)) usedLocalVars.add(v)
+            }
+
+            irFunctions[currentFunction.name] = IRFunction(
+                currentFunction.name,
+                currentFunction.params,
+                usedLocalVars,
+                operations
+            )
+        }
+    }
+
+    private fun processNode(node: ASTNode): Operand {
         return when (node) {
             is ASTNode.BinaryOperation -> {
                 return processBinaryOperation(node)
@@ -161,11 +188,13 @@ class Generator {
 
     fun removeUselessOperations() {
         if (operations.isEmpty()) return
-        val usedVars = mutableSetOf<String>()
+        usedVars = mutableSetOf<String>()
         for (op in operations) {
+            if (program.hasVariable(op.result.name)) {
+                usedVars.add(op.result.name)
+            }
             when(op) {
                 is Operation.Assignment -> {
-                    //usedVars.remove(op.result.name)
                     if (op.operand.type != OperandType.ImmediateValue) {
                         usedVars.add(op.operand.name)
                     }

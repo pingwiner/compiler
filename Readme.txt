@@ -7,6 +7,7 @@ Only integer type supported
 
 var a;
 var b = 1;
+const daysInWeek = 7;
 var someArray[10];
 var otherArray = {1, 2, 3, 4, 5};
 
