@@ -5,23 +5,24 @@ import org.pingwiner.compiler.parser.Program
 import org.pingwiner.compiler.parser.Function
 
 class Generator(val program: Program) {
-    val varValues = mutableMapOf<String, Int>()
-    val varRefs = mutableMapOf<String, String>()
+    private val varValues = mutableMapOf<String, Int>()
+    private val varRefs = mutableMapOf<String, String>()
     companion object {
         var regCount = 0
     }
 
     val irFunctions = mutableMapOf<String, IRFunction>()
 
-    var operations = mutableListOf<Operation>()
-    lateinit var currentFunction: Function
-    var usedVars = mutableSetOf<String>()
+    private var operations = mutableListOf<Operation>()
+    private lateinit var currentFunction: Function
+    private var usedVars = mutableSetOf<String>()
 
     fun generate() {
         for (function in program.functions) {
             currentFunction = function
             operations = mutableListOf()
             usedVars = mutableSetOf()
+            regCount = 0
             processNode(currentFunction.root!!)
             removeUselessOperations()
             val usedLocalVars = mutableListOf<String>()
@@ -96,7 +97,11 @@ class Generator(val program: Program) {
                     } else {
                         varValues.remove(node.left.name)
                         val result = Operand(node.left.name, OperandType.LocalVariable)
-                        val operand = Operand(node.right.name, OperandType.LocalVariable)
+                        val operand = if (varRefs.contains(node.right.name)) {
+                            Operand(varRefs[node.right.name]!!, OperandType.Register)
+                        } else {
+                            Operand(node.right.name, OperandType.LocalVariable)
+                        }
                         operations.add(Operation.Assignment(result, operand))
                         return result
                     }
