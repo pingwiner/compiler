@@ -6,7 +6,8 @@ enum class OperandType {
     ImmediateValue,
     Register,
     LocalVariable,
-    GlobalVariable
+    GlobalVariable,
+    Label
 }
 
 data class Operand(
@@ -43,7 +44,8 @@ enum class Operator(val op: String) {
     OR("|"),
     AND("&"),
     XOR("^"),
-    MOD("%");
+    MOD("%"),
+    IF("?");
 
     companion object {
         fun from(node: ASTNode.BinaryOperation): Operator {
@@ -56,7 +58,7 @@ enum class Operator(val op: String) {
                 is ASTNode.BinaryOperation.Eq -> EQ
                 is ASTNode.BinaryOperation.Gt -> GT
                 is ASTNode.BinaryOperation.GtEq -> GTEQ
-                is ASTNode.BinaryOperation.If -> TODO()
+                is ASTNode.BinaryOperation.If -> IF
                 is ASTNode.BinaryOperation.Lt -> LT
                 is ASTNode.BinaryOperation.LtEq -> LTEQ
                 is ASTNode.BinaryOperation.Minus -> MINUS
@@ -86,6 +88,16 @@ sealed class Operation(val result: Operand) {
     class Return(result: Operand) : Operation(result) {
         override fun toString(): String {
             return "return " + result.name
+        }
+    }
+    class IfNot(val condition: Operand, label: Operand) : Operation(label) {
+        override fun toString(): String {
+            return "IfNot(${condition.name}) goto " + result.name
+        }
+    }
+    class Label(name: String) : Operation(Operand(name, OperandType.ImmediateValue)) {
+        override fun toString(): String {
+            return result.name + ":"
         }
     }
 }

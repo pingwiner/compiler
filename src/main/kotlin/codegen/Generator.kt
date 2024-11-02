@@ -9,6 +9,7 @@ class Generator(val program: Program) {
     private val varRefs = mutableMapOf<String, String>()
     companion object {
         var regCount = 0
+        var labelCount = 0
     }
 
     val irFunctions = mutableMapOf<String, IRFunction>()
@@ -37,6 +38,10 @@ class Generator(val program: Program) {
                 operations
             )
         }
+    }
+
+    private fun generateFrom(node: ASTNode) {
+        processNode(node)
     }
 
     private fun processNode(node: ASTNode): Operand {
@@ -73,7 +78,6 @@ class Generator(val program: Program) {
             }
             else -> TODO()
         }
-        throw IllegalStateException("Not implemented")
     }
 
     private fun processBinaryOperation(node: ASTNode.BinaryOperation): Operand {
@@ -123,6 +127,27 @@ class Generator(val program: Program) {
                 throw IllegalStateException("WTF")
             }
         }
+
+        if (node is ASTNode.BinaryOperation.If) {
+            val genLeft = Generator(program)
+            genLeft.generateFrom(node.left)
+            val genRight = Generator(program)
+            genRight.generateFrom(node.right)
+            operations.addAll(genLeft.operations)
+            val label = "label${labelCount++}"
+            operations.add(Operation.IfNot(operations.last().result, Operand(label, OperandType.Label)))
+            operations.addAll(genRight.operations)
+            val result = operations.last().result
+            operations.add(Operation.Label(label))
+            for (ref in genLeft.varRefs.keys) {
+                varRefs.remove(ref)
+            }
+            for (ref in genRight.varRefs.keys) {
+                varRefs.remove(ref)
+            }
+            return result
+        }
+
         val reg = "R${regCount++}"
 
         val leftVal = processNode(node.left)
@@ -217,11 +242,17 @@ class Generator(val program: Program) {
                         usedVars.add(op.result.name)
                     }
                 }
+                is Operation.IfNot -> {
+                    if (op.condition.name.isNotBlank()) {
+                        usedVars.add(op.condition.name)
+                    }
+                }
+                is Operation.Label -> {}
             }
         }
         val newOperations = mutableListOf<Operation>()
         for (op in operations) {
-            if (usedVars.contains(op.result.name)) {
+            if (usedVars.contains(op.result.name) || op is Operation.IfNot || op is Operation.Label) {
                 newOperations.add(op)
             }
         }
