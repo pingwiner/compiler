@@ -4,7 +4,8 @@ enum class State {
     SPACE,
     NUMBER,
     SYMBOL,
-    OPERATOR
+    OPERATOR,
+    COMMENT
 }
 
 const val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
@@ -43,10 +44,14 @@ class Lexer {
                 State.NUMBER -> number(c)
                 State.SYMBOL -> word(c)
                 State.OPERATOR -> operator(c)
+                State.COMMENT -> {}
             }
             if (c == '\n') {
                 position = 1
                 line++
+                if (state == State.COMMENT) {
+                    state = State.SPACE
+                }
             } else {
                 position++
             }
@@ -72,6 +77,8 @@ class Lexer {
             val specialSymbol = SpecialSymbol.parse(c, line, position)
             if (specialSymbol != null) {
                 tokens.add(specialSymbol)
+            } else if (c == '#') {
+                state = State.COMMENT
             } else {
                 //Some unrecognized character. Just skip it.
             }

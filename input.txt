@@ -1,3 +1,4 @@
+#comment
 
 var globalVar1 = 1;
 const one = 1;

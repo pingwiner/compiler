@@ -1,19 +1,29 @@
 Language description
 
+#Comment
 
 Variables
 
 Only integer type supported
 
+
+Uninitialized variable
 var a;
+
+Initialized variable
 var b = 1;
+
+Constant
 const daysInWeek = 7;
+
+Uninitialized array
 var someArray[10];
+
+Initialized array
 var otherArray = {1, 2, 3, 4, 5};
 
 
 Arithmetics
-
 y = (x + 1) / 2 * i;
 
 
@@ -24,7 +34,9 @@ fun main() {
 }
 
 fun func1(x, y) {
-	return x + y;
+    # local variables don't need 'var' keyword
+    a = 1;
+	return x + y + a;
 }
 
 
