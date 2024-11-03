@@ -45,9 +45,13 @@ class Generator(val program: Program) {
     }
 
     private fun processNode(node: ASTNode): Operand {
-        return when (node) {
+        when (node) {
             is ASTNode.BinaryOperation -> {
                 return processBinaryOperation(node)
+            }
+
+            is ASTNode.While -> {
+                return processWhileOperation(node)
             }
 
             is ASTNode.ImmediateValue -> {
@@ -78,6 +82,45 @@ class Generator(val program: Program) {
             }
             else -> TODO()
         }
+    }
+
+    private fun clearRefs(generator: Generator) {
+        for (ref in generator.varRefs.keys) {
+            varRefs.remove(ref)
+        }
+    }
+
+    private fun processWhileOperation(node: ASTNode.While): Operand {
+        val genCondition = Generator(program)
+        genCondition.generateFrom(node.condition)
+        val labelStart = nextLabel()
+        val labelEnd = nextLabel()
+        operations.add(Operation.Label(labelStart))
+        operations.addAll(genCondition.operations)
+        clearRefs(genCondition)
+        operations.add(jumpIfNot(operations.last().result, labelEnd))
+
+        val genStatement = Generator(program)
+        genStatement.generateFrom(node.statement)
+        operations.addAll(genStatement.operations)
+        clearRefs(genStatement)
+
+        val result = operations.last().result
+        operations.add(jump(labelStart))
+        operations.add(Operation.Label(labelEnd))
+        return result
+    }
+
+    private fun nextLabel() : String {
+        return "label${labelCount++}"
+    }
+
+    private fun jumpIfNot(operand: Operand, label: String) : Operation.IfNot {
+        return Operation.IfNot(operand, Operand(label, OperandType.Label))
+    }
+
+    private fun jump(label: String) : Operation.Goto {
+        return Operation.Goto(Operand(label, OperandType.Label))
     }
 
     private fun processBinaryOperation(node: ASTNode.BinaryOperation): Operand {
@@ -132,11 +175,9 @@ class Generator(val program: Program) {
             val genLeft = Generator(program)
             genLeft.generateFrom(node.left)
             operations.addAll(genLeft.operations)
-            val label = "label${labelCount++}"
-            operations.add(Operation.IfNot(operations.last().result, Operand(label, OperandType.Label)))
-            for (ref in genLeft.varRefs.keys) {
-                varRefs.remove(ref)
-            }
+            val label = nextLabel()
+            operations.add(jumpIfNot(operations.last().result, label))
+            clearRefs(genLeft)
             if (node.right is ASTNode.BinaryOperation.Else) {
                 val genThen = Generator(program)
                 genThen.generateFrom(node.right.left)
@@ -145,19 +186,13 @@ class Generator(val program: Program) {
                 operations.addAll(genThen.operations)
                 operations.add(Operation.Label(label))
                 operations.addAll(genElse.operations)
-                for (ref in genThen.varRefs.keys) {
-                    varRefs.remove(ref)
-                }
-                for (ref in genElse.varRefs.keys) {
-                    varRefs.remove(ref)
-                }
+                clearRefs(genThen)
+                clearRefs(genElse)
             } else {
                 val genRight = Generator(program)
                 genRight.generateFrom(node.right)
                 operations.add(Operation.Label(label))
-                for (ref in genRight.varRefs.keys) {
-                    varRefs.remove(ref)
-                }
+                clearRefs(genRight)
             }
 
             return operations.last().result
@@ -263,11 +298,12 @@ class Generator(val program: Program) {
                     }
                 }
                 is Operation.Label -> {}
+                is Operation.Goto -> {}
             }
         }
         val newOperations = mutableListOf<Operation>()
         for (op in operations) {
-            if (usedVars.contains(op.result.name) || op is Operation.IfNot || op is Operation.Label) {
+            if (usedVars.contains(op.result.name) || op is Operation.IfNot || op is Operation.Label || op is Operation.Goto) {
                 newOperations.add(op)
             }
         }

@@ -100,4 +100,9 @@ sealed class Operation(val result: Operand) {
             return result.name + ":"
         }
     }
+    class Goto(label: Operand) : Operation(label) {
+        override fun toString(): String {
+            return "goto " + result.name
+        }
+    }
 }
