@@ -131,21 +131,36 @@ class Generator(val program: Program) {
         if (node is ASTNode.BinaryOperation.If) {
             val genLeft = Generator(program)
             genLeft.generateFrom(node.left)
-            val genRight = Generator(program)
-            genRight.generateFrom(node.right)
             operations.addAll(genLeft.operations)
             val label = "label${labelCount++}"
             operations.add(Operation.IfNot(operations.last().result, Operand(label, OperandType.Label)))
-            operations.addAll(genRight.operations)
-            val result = operations.last().result
-            operations.add(Operation.Label(label))
             for (ref in genLeft.varRefs.keys) {
                 varRefs.remove(ref)
             }
-            for (ref in genRight.varRefs.keys) {
-                varRefs.remove(ref)
+            if (node.right is ASTNode.BinaryOperation.Else) {
+                val genThen = Generator(program)
+                genThen.generateFrom(node.right.left)
+                val genElse = Generator(program)
+                genElse.generateFrom(node.right.right)
+                operations.addAll(genThen.operations)
+                operations.add(Operation.Label(label))
+                operations.addAll(genElse.operations)
+                for (ref in genThen.varRefs.keys) {
+                    varRefs.remove(ref)
+                }
+                for (ref in genElse.varRefs.keys) {
+                    varRefs.remove(ref)
+                }
+            } else {
+                val genRight = Generator(program)
+                genRight.generateFrom(node.right)
+                operations.add(Operation.Label(label))
+                for (ref in genRight.varRefs.keys) {
+                    varRefs.remove(ref)
+                }
             }
-            return result
+
+            return operations.last().result
         }
 
         val reg = "R${regCount++}"
@@ -216,7 +231,7 @@ class Generator(val program: Program) {
         }
     }
 
-    fun removeUselessOperations() {
+    private fun removeUselessOperations() {
         if (operations.isEmpty()) return
         usedVars = mutableSetOf<String>()
         for (op in operations) {

@@ -10,7 +10,9 @@ fun f1(x) {
 fun main(arg1, arg2) {
     b = 1 + arg1;
     (b > 0) ? {
-            b = b + 3;
+        b = b + 3;
+    } : {
+        b = b - 1;
     };
     a = b + arg2;
     globalVar1 = a;
