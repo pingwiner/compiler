@@ -105,4 +105,26 @@ sealed class Operation(val result: Operand) {
             return "goto " + result.name
         }
     }
+    class Call(label: Operand, val args: List<Operand>) : Operation(label) {
+        override fun toString(): String {
+            val argsList = StringBuilder()
+            argsList.append("(")
+            var first = true
+            for (arg in args) {
+                if (first) {
+                    first = false
+                } else {
+                    argsList.append(", ")
+                }
+                argsList.append(arg.name)
+            }
+            argsList.append(")")
+            return "call " + result.name + " " + argsList.toString()
+        }
+    }
+    class Ret(result : Operand) : Operation(result) {
+        override fun toString(): String {
+            return "return " + result.name
+        }
+    }
 }

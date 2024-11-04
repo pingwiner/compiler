@@ -3,17 +3,12 @@
 var globalVar1 = 1;
 const one = 1;
 
-fun f1(x) {
-    return x;
+fun f1(x, y) {
+    return x + 2 * y;
 }
 
 fun main(arg1, arg2) {
     b = 1 + arg1;
-    {
-        b = b + 3;
-    } while (b < 10);
-
-    a = b + arg2;
-    globalVar1 = a;
-    return b
+    a = f1(b + 1, arg2 + 2);
+    return a;
 }

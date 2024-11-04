@@ -54,8 +54,16 @@ class Generator(val program: Program) {
                 return processWhileOperation(node)
             }
 
+            is ASTNode.Until -> {
+                return processUntilOperation(node)
+            }
+
             is ASTNode.ImmediateValue -> {
                 return Operand(node.value.toString(), OperandType.ImmediateValue, node.value)
+            }
+
+            is ASTNode.FunctionCall -> {
+                return processFunctionCall(node)
             }
 
             is ASTNode.Variable -> {
@@ -82,6 +90,32 @@ class Generator(val program: Program) {
             }
             else -> TODO()
         }
+    }
+
+    private fun processFunctionCall(node: ASTNode.FunctionCall): Operand {
+        val callArgs = mutableListOf<Operand>()
+        for (arg in node.arguments) {
+            val callArg = processNode(arg)
+            callArgs.add(callArg)
+        }
+        operations.add(Operation.Call(Operand(node.name, OperandType.Label), callArgs))
+        return operations.last().result
+    }
+
+    private fun processUntilOperation(node: ASTNode.Until): Operand {
+        val labelStart = nextLabel()
+        operations.add(Operation.Label(labelStart))
+        val genStatement = Generator(program)
+        genStatement.generateFrom(node.statement)
+        operations.addAll(genStatement.operations)
+        val result = operations.last().result
+        val genCondition = Generator(program)
+        genCondition.generateFrom(node.condition)
+        operations.addAll(genCondition.operations)
+        operations.add(jumpIfNot(operations.last().result, labelStart))
+        clearRefs(genStatement)
+        clearRefs(genCondition)
+        return result
     }
 
     private fun clearRefs(generator: Generator) {
@@ -299,6 +333,14 @@ class Generator(val program: Program) {
                 }
                 is Operation.Label -> {}
                 is Operation.Goto -> {}
+                is Operation.Call -> {
+                    for (arg in op.args) {
+                        usedVars.add(arg.name)
+                    }
+                }
+                is Operation.Ret -> {
+                    usedVars.add(op.result.name)
+                }
             }
         }
         val newOperations = mutableListOf<Operation>()
