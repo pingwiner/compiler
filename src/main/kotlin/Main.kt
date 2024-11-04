@@ -12,6 +12,5 @@ fun main() {
     val program = parser.parse(lexer.tokens)
     val generator = Generator(program)
     generator.generate()
-    generator.printOperations()
     println("")
 }

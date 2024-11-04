@@ -22,6 +22,7 @@ class Generator(val program: Program) {
         for (function in program.functions) {
             currentFunction = function
             operations = mutableListOf()
+            operations.add(Operation.Label(currentFunction.name))
             usedVars = mutableSetOf()
             regCount = 0
             processNode(currentFunction.root!!)
@@ -37,6 +38,7 @@ class Generator(val program: Program) {
                 usedLocalVars,
                 operations
             )
+            printOperations()
         }
     }
 
@@ -298,6 +300,7 @@ class Generator(val program: Program) {
         for (op in operations) {
             println(op.toString())
         }
+        println()
     }
 
     private fun removeUselessOperations() {
