@@ -68,6 +68,10 @@ class Generator(val program: Program) {
                 return processFunctionCall(node)
             }
 
+            is ASTNode.Repeat -> {
+                TODO("Not implemented")
+            }
+
             is ASTNode.Variable -> {
                 if (varValues.contains(node.name)) {
                     val v: Int = varValues[node.name]!!
@@ -212,26 +216,46 @@ class Generator(val program: Program) {
             genLeft.generateFrom(node.left)
             operations.addAll(genLeft.operations)
             val label = nextLabel()
+            val label2 = nextLabel()
             operations.add(jumpIfNot(operations.last().result, label))
             clearRefs(genLeft)
+            lateinit var result1 : Operand
+            lateinit var result2 : Operand
             if (node.right is ASTNode.BinaryOperation.Else) {
                 val genThen = Generator(program)
                 genThen.generateFrom(node.right.left)
                 val genElse = Generator(program)
                 genElse.generateFrom(node.right.right)
-                operations.addAll(genThen.operations)
+                if (node.right.left is ASTNode.ImmediateValue) {
+                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.right.left.value)))
+                } else if (node.right.left is ASTNode.Variable) {
+                    operations.add(Operation.SetResult(Operand(node.right.left.name, OperandType.LocalVariable)))
+                } else {
+                    operations.addAll(genThen.operations)
+                }
+                result1 = operations.last().result
+                operations.add(jump(label2))
                 operations.add(Operation.Label(label))
-                operations.addAll(genElse.operations)
-                clearRefs(genThen)
-                clearRefs(genElse)
+                if (node.right.right is ASTNode.ImmediateValue) {
+                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.right.right.value)))
+                } else if (node.right.right is ASTNode.Variable) {
+                    operations.add(Operation.SetResult(Operand(node.right.right.name, OperandType.LocalVariable)))
+                } else {
+                    operations.addAll(genElse.operations)
+                }
+                result2 = operations.last().result
+                operations.add(Operation.Label(label2))
+                //clearRefs(genThen)
+                //clearRefs(genElse)
             } else {
                 val genRight = Generator(program)
                 genRight.generateFrom(node.right)
                 operations.add(Operation.Label(label))
+                result1 = operations.last().result
+                result2 = Operand("default", OperandType.ImmediateValue, 0)
                 clearRefs(genRight)
             }
-
-            return operations.last().result
+            return Phi(result1, result2)
         }
 
         val reg = "R${regCount++}"
@@ -313,7 +337,16 @@ class Generator(val program: Program) {
             when(op) {
                 is Operation.Assignment -> {
                     if (op.operand.type != OperandType.ImmediateValue) {
-                        usedVars.add(op.operand.name)
+                        if (op.operand is Phi) {
+                            if (op.operand.op1.type != OperandType.ImmediateValue) {
+                                usedVars.add(op.operand.op1.name)
+                            }
+                            if (op.operand.op2.type != OperandType.ImmediateValue) {
+                                usedVars.add(op.operand.op2.name)
+                            }
+                        } else {
+                            usedVars.add(op.operand.name)
+                        }
                     }
                 }
                 is Operation.BinaryOperation -> {
@@ -341,7 +374,7 @@ class Generator(val program: Program) {
                         usedVars.add(arg.name)
                     }
                 }
-                is Operation.Ret -> {
+                is Operation.SetResult -> {
                     usedVars.add(op.result.name)
                 }
             }

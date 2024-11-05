@@ -7,10 +7,11 @@ enum class OperandType {
     Register,
     LocalVariable,
     GlobalVariable,
-    Label
+    Label,
+    Phi
 }
 
-data class Operand(
+open class Operand(
     val name: String,
     val type: OperandType,
     val value: Int? = null
@@ -25,6 +26,12 @@ data class Operand(
         } else {
             return name
         }
+    }
+}
+
+class Phi(val op1: Operand, val op2: Operand) : Operand("phi", OperandType.Phi) {
+    override fun toString(): String {
+        return "Phi($op1, ${op2})"
     }
 }
 
@@ -122,9 +129,9 @@ sealed class Operation(val result: Operand) {
             return "call " + label.name + argsList.toString()
         }
     }
-    class Ret(result : Operand) : Operation(result) {
+    class SetResult(op: Operand): Operation(op) {
         override fun toString(): String {
-            return "return " + result.name
+            return "SetResult $result"
         }
     }
 }

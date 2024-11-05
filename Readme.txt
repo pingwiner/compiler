@@ -54,11 +54,6 @@ y = (a == 1) ? (a + 2) : func(a);
 Cycles
 
 {
-	x = x + 1;
-} repeat(10);
-
-
-{
 	y[i] = i;
     i = i + 1;
 } while (i < 10);
