@@ -134,4 +134,9 @@ sealed class Operation(val result: Operand) {
             return "SetResult $result"
         }
     }
+    class Neg(result: Operand, val operand: Operand) : Operation(result) {
+        override fun toString(): String {
+            return result.name + " = -" + operand
+        }
+    }
 }

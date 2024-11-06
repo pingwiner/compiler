@@ -1,9 +1,8 @@
 #comment
 
 fun main(arg1, arg2) {
-    b = (arg1 > 0) ? arg1 : {
-        a = 3 + 2;
-    };
-    c = 0;
-    return b;
+    a = 1;
+    b = (arg1 > 0) ? a;
+    c = neg(arg2);
+    return c;
 }

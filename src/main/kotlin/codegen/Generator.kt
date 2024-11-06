@@ -68,6 +68,10 @@ class Generator(val program: Program) {
                 return processFunctionCall(node)
             }
 
+            is ASTNode.Neg -> {
+                return processNeg(node)
+            }
+
             is ASTNode.Repeat -> {
                 TODO("Not implemented")
             }
@@ -245,13 +249,19 @@ class Generator(val program: Program) {
                 }
                 result2 = operations.last().result
                 operations.add(Operation.Label(label2))
-                //clearRefs(genThen)
-                //clearRefs(genElse)
             } else {
                 val genRight = Generator(program)
                 genRight.generateFrom(node.right)
-                operations.add(Operation.Label(label))
+
+                if (node.right is ASTNode.ImmediateValue) {
+                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.right.value)))
+                } else if (node.right is ASTNode.Variable) {
+                    operations.add(Operation.SetResult(Operand(node.right.name, OperandType.LocalVariable)))
+                } else {
+                    operations.addAll(genRight.operations)
+                }
                 result1 = operations.last().result
+                operations.add(Operation.Label(label))
                 result2 = Operand("default", OperandType.ImmediateValue, 0)
                 clearRefs(genRight)
             }
@@ -291,6 +301,18 @@ class Generator(val program: Program) {
         return result
     }
 
+    private fun processNeg(node: ASTNode.Neg): Operand {
+        val n = processNode(node.arg)
+        val reg = "R${regCount++}"
+        if (n.type == OperandType.ImmediateValue) {
+            val newVal = -(n.value ?: 0)
+            return Operand(newVal.toString(), OperandType.ImmediateValue, newVal)
+        }
+
+        val op = Operation.Neg(Operand(reg, OperandType.Register), n)
+        operations.add(op)
+        return operations.last().result
+    }
 
     private fun calculate(node: ASTNode.BinaryOperation, left: Int, right: Int): Int {
         if (node is ASTNode.BinaryOperation.If || node is ASTNode.BinaryOperation.Else || node is ASTNode.BinaryOperation.Assign) {
@@ -376,6 +398,11 @@ class Generator(val program: Program) {
                 }
                 is Operation.SetResult -> {
                     usedVars.add(op.result.name)
+                }
+                is Operation.Neg -> {
+                    if (op.operand.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.operand.name)
+                    }
                 }
             }
         }
