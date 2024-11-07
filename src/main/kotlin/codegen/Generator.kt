@@ -220,33 +220,7 @@ class Generator(val program: Program) {
         }
 
         if (node is ASTNode.BinaryOperation.If) {
-            val genLeft = Generator(program)
-            genLeft.generateFrom(node.left)
-            operations.addAll(genLeft.operations)
-            val label = nextLabel()
-            val label2 = nextLabel()
-            operations.add(jumpIfNot(operations.last().result, label))
-            clearRefs(genLeft)
-            lateinit var result1 : Operand
-            lateinit var result2 : Operand
-            if (node.right is ASTNode.BinaryOperation.Else) {
-                val genThen = Generator(program)
-                genThen.generateFrom(node.right.left)
-                val genElse = Generator(program)
-                genElse.generateFrom(node.right.right)
-                result1 = makeBranch(node.right.left, genThen)
-                operations.add(jump(label2))
-                operations.add(Operation.Label(label))
-                result2 = makeBranch(node.right.right, genElse)
-                operations.add(Operation.Label(label2))
-            } else {
-                val genRight = Generator(program)
-                genRight.generateFrom(node.right)
-                result1 = makeBranch(node.right, genRight)
-                operations.add(Operation.Label(label))
-                result2 = Operand("default", OperandType.ImmediateValue, 0)
-            }
-            return Phi(result1, result2)
+            return processIf(node)
         }
 
         val reg = "R${regCount++}"
@@ -319,6 +293,38 @@ class Generator(val program: Program) {
             }
         }
         return Operation.SetResult(op)
+    }
+
+    private fun processIf(node: ASTNode.BinaryOperation.If): Operand {
+        val condition = Generator(program)
+        condition.generateFrom(node.left)
+        operations.addAll(condition.operations)
+        val label = nextLabel()
+        val label2 = nextLabel()
+        operations.add(jumpIfNot(operations.last().result, label))
+        clearRefs(condition)
+
+        lateinit var result1 : Operand
+        lateinit var result2 : Operand
+        if (node.right is ASTNode.BinaryOperation.Else) {
+            val thenBranch = Generator(program)
+            thenBranch.generateFrom(node.right.left)
+            result1 = makeBranch(node.right.left, thenBranch)
+            operations.add(jump(label2))
+            operations.add(Operation.Label(label))
+
+            val elseBranch = Generator(program)
+            elseBranch.generateFrom(node.right.right)
+            result2 = makeBranch(node.right.right, elseBranch)
+            operations.add(Operation.Label(label2))
+        } else {
+            val thenBranch = Generator(program)
+            thenBranch.generateFrom(node.right)
+            result1 = makeBranch(node.right, thenBranch)
+            operations.add(Operation.Label(label))
+            result2 = Operand("default", OperandType.ImmediateValue, 0)
+        }
+        return Phi(result1, result2)
     }
 
     private fun processNeg(node: ASTNode.Neg): Operand {
