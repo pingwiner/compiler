@@ -234,40 +234,17 @@ class Generator(val program: Program) {
                 genThen.generateFrom(node.right.left)
                 val genElse = Generator(program)
                 genElse.generateFrom(node.right.right)
-                if (node.right.left is ASTNode.ImmediateValue) {
-                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.right.left.value)))
-                } else if (node.right.left is ASTNode.Variable) {
-                    operations.add(Operation.SetResult(Operand(node.right.left.name, OperandType.LocalVariable)))
-                } else {
-                    operations.addAll(genThen.operations)
-                }
-                result1 = operations.last().result
+                result1 = makeBranch(node.right.left, genThen)
                 operations.add(jump(label2))
                 operations.add(Operation.Label(label))
-                if (node.right.right is ASTNode.ImmediateValue) {
-                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.right.right.value)))
-                } else if (node.right.right is ASTNode.Variable) {
-                    operations.add(Operation.SetResult(Operand(node.right.right.name, OperandType.LocalVariable)))
-                } else {
-                    operations.addAll(genElse.operations)
-                }
-                result2 = operations.last().result
+                result2 = makeBranch(node.right.right, genElse)
                 operations.add(Operation.Label(label2))
             } else {
                 val genRight = Generator(program)
                 genRight.generateFrom(node.right)
-
-                if (node.right is ASTNode.ImmediateValue) {
-                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.right.value)))
-                } else if (node.right is ASTNode.Variable) {
-                    operations.add(Operation.SetResult(Operand(node.right.name, OperandType.LocalVariable)))
-                } else {
-                    operations.addAll(genRight.operations)
-                }
-                result1 = operations.last().result
+                result1 = makeBranch(node.right, genRight)
                 operations.add(Operation.Label(label))
                 result2 = Operand("default", OperandType.ImmediateValue, 0)
-                clearRefs(genRight)
             }
             return Phi(result1, result2)
         }
@@ -303,6 +280,45 @@ class Generator(val program: Program) {
         val result = Operand(reg, OperandType.Register)
         operations.add(Operation.BinaryOperation(result, leftVal, rightVal, operator))
         return result
+    }
+
+    private fun makeBranch(node: ASTNode, generator: Generator) : Operand {
+        when (node) {
+            is ASTNode.ImmediateValue -> {
+                operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.value)))
+            }
+
+            is ASTNode.Variable -> {
+                operations.add(Operation.SetResult(Operand(node.name, OperandType.LocalVariable)))
+            }
+
+            else -> {
+                operations.addAll(generator.operations)
+                operations.add(makeResult(operations.last().result))
+            }
+        }
+        return operations.last().result
+    }
+
+    private fun makeResult(op: Operand) : Operation.SetResult {
+        if (op.type == OperandType.ImmediateValue) {
+            return Operation.SetResult(op)
+        }
+        if (op.type == OperandType.LocalVariable) {
+            op.value?.let {
+                return Operation.SetResult(
+                    Operand(op.name, OperandType.ImmediateValue, it)
+                )
+            }
+        }
+        if (op.type == OperandType.Register) {
+            if (varValues.containsKey(op.name)) {
+                return Operation.SetResult(
+                    Operand(op.name, OperandType.ImmediateValue, varValues[op.name])
+                )
+            }
+        }
+        return Operation.SetResult(op)
     }
 
     private fun processNeg(node: ASTNode.Neg): Operand {
