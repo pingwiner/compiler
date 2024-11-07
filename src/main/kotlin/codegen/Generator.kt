@@ -72,6 +72,10 @@ class Generator(val program: Program) {
                 return processNeg(node)
             }
 
+            is ASTNode.Inv -> {
+                return processInv(node)
+            }
+
             is ASTNode.Repeat -> {
                 TODO("Not implemented")
             }
@@ -314,6 +318,19 @@ class Generator(val program: Program) {
         return operations.last().result
     }
 
+    private fun processInv(node: ASTNode.Inv): Operand {
+        val n = processNode(node.arg)
+        val reg = "R${regCount++}"
+        if (n.type == OperandType.ImmediateValue) {
+            val newVal = n.value?.inv() ?: 0
+            return Operand(newVal.toString(), OperandType.ImmediateValue, newVal)
+        }
+
+        val op = Operation.Inv(Operand(reg, OperandType.Register), n)
+        operations.add(op)
+        return operations.last().result
+    }
+
     private fun calculate(node: ASTNode.BinaryOperation, left: Int, right: Int): Int {
         if (node is ASTNode.BinaryOperation.If || node is ASTNode.BinaryOperation.Else || node is ASTNode.BinaryOperation.Assign) {
             throw IllegalStateException("Not implemented")
@@ -400,6 +417,11 @@ class Generator(val program: Program) {
                     usedVars.add(op.result.name)
                 }
                 is Operation.Neg -> {
+                    if (op.operand.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.operand.name)
+                    }
+                }
+                is Operation.Inv -> {
                     if (op.operand.type != OperandType.ImmediateValue) {
                         usedVars.add(op.operand.name)
                     }

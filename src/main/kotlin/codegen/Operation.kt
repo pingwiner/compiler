@@ -139,4 +139,9 @@ sealed class Operation(val result: Operand) {
             return result.name + " = -" + operand
         }
     }
+    class Inv(result: Operand, val operand: Operand) : Operation(result) {
+        override fun toString(): String {
+            return result.name + " = ~" + operand
+        }
+    }
 }
