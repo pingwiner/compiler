@@ -46,10 +46,10 @@ class Generator(val program: Program) {
         processNode(node)
     }
 
-    private fun processNode(node: ASTNode): Operand {
+    private fun processNode(node: ASTNode, parent: ASTNode? = null): Operand {
         when (node) {
             is ASTNode.BinaryOperation -> {
-                return processBinaryOperation(node)
+                return processBinaryOperation(node, parent)
             }
 
             is ASTNode.While -> {
@@ -97,7 +97,7 @@ class Generator(val program: Program) {
                 for (subNode in node.subNodes) {
                     result = processNode(subNode)
                 }
-                return result!!
+                return result ?: Default()
             }
             is ASTNode.Return -> {
                 return processReturn(node)
@@ -136,6 +136,9 @@ class Generator(val program: Program) {
         for (ref in generator.varRefs.keys) {
             varRefs.remove(ref)
         }
+        for (ref in generator.varValues.keys) {
+            varValues.remove(ref)
+        }
     }
 
     private fun processWhileOperation(node: ASTNode.While): Operand {
@@ -163,6 +166,10 @@ class Generator(val program: Program) {
         return "label${labelCount++}"
     }
 
+    private fun nextRegister(): String {
+        return "R${regCount++}"
+    }
+
     private fun jumpIfNot(operand: Operand, label: String) : Operation.IfNot {
         return Operation.IfNot(operand, Operand(label, OperandType.Label))
     }
@@ -171,59 +178,18 @@ class Generator(val program: Program) {
         return Operation.Goto(Operand(label, OperandType.Label))
     }
 
-    private fun processBinaryOperation(node: ASTNode.BinaryOperation): Operand {
+    private fun processBinaryOperation(node: ASTNode.BinaryOperation, parent: ASTNode? = null): Operand {
         if (node is ASTNode.BinaryOperation.Assign) {
-            if (node.left is ASTNode.Variable) {
-                if (node.right is ASTNode.ImmediateValue) {
-                    varValues[node.left.name] = node.right.value
-                    varRefs.remove(node.left.name)
-                    val result = Operand(node.left.name, OperandType.LocalVariable, node.right.value)
-                    val operand = Operand(node.right.value.toString(), OperandType.ImmediateValue, node.right.value)
-                    operations.add(Operation.Assignment(result, operand))
-                    return result
-                } else if (node.right is ASTNode.Variable) {
-                    varRefs.remove(node.left.name)
-                    if (varValues.contains(node.right.name)) {
-                        varValues[node.left.name] = varValues[node.right.name]!!
-                        val result = Operand(node.left.name, OperandType.LocalVariable)
-                        val operand = Operand(node.right.name, OperandType.ImmediateValue, varValues[node.right.name]!!)
-                        operations.add(Operation.Assignment(result, operand))
-                        return result
-                    } else {
-                        varValues.remove(node.left.name)
-                        val result = Operand(node.left.name, OperandType.LocalVariable)
-                        val operand = if (varRefs.contains(node.right.name)) {
-                            Operand(varRefs[node.right.name]!!, OperandType.Register)
-                        } else {
-                            Operand(node.right.name, OperandType.LocalVariable)
-                        }
-                        operations.add(Operation.Assignment(result, operand))
-                        return result
-                    }
-                } else {
-                    val result = Operand(node.left.name, OperandType.LocalVariable)
-                    val operand = processNode(node.right)
-                    operations.add(Operation.Assignment(result, operand))
-                    if (operand.value != null) {
-                        varValues[node.left.name] = operand.value
-                        varRefs.remove(node.left.name)
-                    } else {
-                        if (operand.type == OperandType.Register) {
-                            varRefs[node.left.name] = operand.name
-                        }
-                    }
-                    return result
-                }
-            } else {
-                throw IllegalStateException("WTF")
-            }
+            return processAssign(node)
         }
 
         if (node is ASTNode.BinaryOperation.If) {
-            return processIf(node)
+            return processIf(node, parent)
         }
 
-        val reg = "R${regCount++}"
+        //Arithmetic and logic operations
+
+        val reg = nextRegister()
 
         val leftVal = processNode(node.left)
         val rightVal = processNode(node.right)
@@ -256,19 +222,29 @@ class Generator(val program: Program) {
         return result
     }
 
-    private fun makeBranch(node: ASTNode, generator: Generator) : Operand {
+    private fun makeBranch(node: ASTNode, generator: Generator, needReturnValue: Boolean) : Operand {
         when (node) {
             is ASTNode.ImmediateValue -> {
-                operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.value)))
+                if (needReturnValue) {
+                    operations.add(Operation.SetResult(Operand("", OperandType.ImmediateValue, node.value)))
+                }
             }
 
             is ASTNode.Variable -> {
-                operations.add(Operation.SetResult(Operand(node.name, OperandType.LocalVariable)))
+                if (needReturnValue) {
+                    operations.add(Operation.SetResult(Operand(node.name, OperandType.LocalVariable)))
+                }
             }
 
             else -> {
                 operations.addAll(generator.operations)
-                operations.add(makeResult(operations.last().result))
+                if (needReturnValue) {
+                    if (generator.operations.size > 0) {
+                        operations.add(makeResult(operations.last().result))
+                    } else {
+                        operations.add(Operation.SetResult(Default()))
+                    }
+                }
             }
         }
         return operations.last().result
@@ -295,9 +271,10 @@ class Generator(val program: Program) {
         return Operation.SetResult(op)
     }
 
-    private fun processIf(node: ASTNode.BinaryOperation.If): Operand {
+    private fun processIf(node: ASTNode.BinaryOperation.If, parent: ASTNode? = null): Operand {
         val condition = Generator(program)
         condition.generateFrom(node.left)
+        val opCount = operations.size
         operations.addAll(condition.operations)
         val label = nextLabel()
         val label2 = nextLabel()
@@ -306,30 +283,96 @@ class Generator(val program: Program) {
 
         lateinit var result1 : Operand
         lateinit var result2 : Operand
+        val needReturnValue = parent is ASTNode.BinaryOperation.Assign
+        var hasUsefulOperations = false
         if (node.right is ASTNode.BinaryOperation.Else) {
             val thenBranch = Generator(program)
             thenBranch.generateFrom(node.right.left)
-            result1 = makeBranch(node.right.left, thenBranch)
+            result1 = makeBranch(node.right.left, thenBranch, needReturnValue)
             operations.add(jump(label2))
             operations.add(Operation.Label(label))
 
             val elseBranch = Generator(program)
             elseBranch.generateFrom(node.right.right)
-            result2 = makeBranch(node.right.right, elseBranch)
+            result2 = makeBranch(node.right.right, elseBranch, needReturnValue)
             operations.add(Operation.Label(label2))
+
+            if ((thenBranch.operations.size > 0) || (elseBranch.operations.size > 0) || needReturnValue) {
+                hasUsefulOperations = true
+                clearRefs(thenBranch)
+                clearRefs(elseBranch)
+            }
         } else {
             val thenBranch = Generator(program)
             thenBranch.generateFrom(node.right)
-            result1 = makeBranch(node.right, thenBranch)
+            result1 = makeBranch(node.right, thenBranch, needReturnValue)
             operations.add(Operation.Label(label))
-            result2 = Operand("default", OperandType.ImmediateValue, 0)
+            result2 = Default()
+            if (thenBranch.operations.size > 0 || needReturnValue) {
+                hasUsefulOperations = true
+                clearRefs(thenBranch)
+            }
+        }
+        if (!hasUsefulOperations) {
+            operations = operations.dropLast(operations.size - opCount).toMutableList()
+            return Default()
+        }
+        if (result1.theSameAs(result2)) {
+            return result1
         }
         return Phi(result1, result2)
     }
 
+    private fun processAssign(node: ASTNode.BinaryOperation.Assign): Operand {
+        if (node.left is ASTNode.Variable) {
+            if (node.right is ASTNode.ImmediateValue) {
+                varValues[node.left.name] = node.right.value
+                varRefs.remove(node.left.name)
+                val result = Operand(node.left.name, OperandType.LocalVariable, node.right.value)
+                val operand = Operand(node.right.value.toString(), OperandType.ImmediateValue, node.right.value)
+                operations.add(Operation.Assignment(result, operand))
+                return result
+            } else if (node.right is ASTNode.Variable) {
+                varRefs.remove(node.left.name)
+                if (varValues.contains(node.right.name)) {
+                    varValues[node.left.name] = varValues[node.right.name]!!
+                    val result = Operand(node.left.name, OperandType.LocalVariable)
+                    val operand = Operand(node.right.name, OperandType.ImmediateValue, varValues[node.right.name]!!)
+                    operations.add(Operation.Assignment(result, operand))
+                    return result
+                } else {
+                    varValues.remove(node.left.name)
+                    val result = Operand(node.left.name, OperandType.LocalVariable)
+                    val operand = if (varRefs.contains(node.right.name)) {
+                        Operand(varRefs[node.right.name]!!, OperandType.Register)
+                    } else {
+                        Operand(node.right.name, OperandType.LocalVariable)
+                    }
+                    operations.add(Operation.Assignment(result, operand))
+                    return result
+                }
+            } else {
+                val result = Operand(node.left.name, OperandType.LocalVariable)
+                val operand = processNode(node.right, node)
+                operations.add(Operation.Assignment(result, operand))
+                if (operand.value != null) {
+                    varValues[node.left.name] = operand.value
+                    varRefs.remove(node.left.name)
+                } else {
+                    if (operand.type == OperandType.Register) {
+                        varRefs[node.left.name] = operand.name
+                    }
+                }
+                return result
+            }
+        } else {
+            throw IllegalStateException("WTF")
+        }
+    }
+
     private fun processNeg(node: ASTNode.Neg): Operand {
         val n = processNode(node.arg)
-        val reg = "R${regCount++}"
+        val reg = nextRegister()
         if (n.type == OperandType.ImmediateValue) {
             val newVal = -(n.value ?: 0)
             return Operand(newVal.toString(), OperandType.ImmediateValue, newVal)
@@ -342,7 +385,7 @@ class Generator(val program: Program) {
 
     private fun processInv(node: ASTNode.Inv): Operand {
         val n = processNode(node.arg)
-        val reg = "R${regCount++}"
+        val reg = nextRegister()
         if (n.type == OperandType.ImmediateValue) {
             val newVal = n.value?.inv() ?: 0
             return Operand(newVal.toString(), OperandType.ImmediateValue, newVal)

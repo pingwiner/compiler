@@ -27,7 +27,13 @@ open class Operand(
             return name
         }
     }
+
+    fun theSameAs(op: Operand): Boolean {
+        return (name == op.name) && (type == op.type) && (value == op.value)
+    }
 }
+
+class Default() : Operand("default", OperandType.ImmediateValue, 0)
 
 class Phi(val op1: Operand, val op2: Operand) : Operand("phi", OperandType.Phi) {
     override fun toString(): String {

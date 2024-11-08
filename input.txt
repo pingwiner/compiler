@@ -2,7 +2,12 @@
 
 fun main(arg1, arg2) {
     a = 1;
-    (arg1 > a + arg2 - 3) ? { a = a + arg2; } : 4;
+    b = (arg1 > 0) ? {
+        a = arg2;
 
-    return a;
+    }: {
+        a;
+    };
+
+    return b;
 }
