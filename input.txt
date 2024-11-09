@@ -1,13 +1,10 @@
 #comment
 
+var xx = 1;
+
 fun main(arg1, arg2) {
-    a = 1;
-    b = (arg1 > 0) ? {
-        a = arg2;
-
-    }: {
-        a;
-    };
-
-    return b;
+    a = 1 + xx;
+    xx = arg1;
+    a = a + xx;
+    return a;
 }

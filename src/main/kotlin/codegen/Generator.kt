@@ -19,6 +19,15 @@ class Generator(val program: Program) {
     private var usedVars = mutableSetOf<String>()
 
     fun generate() {
+        for (v in program.globalVars.values) {
+            if (v.size == 1) {
+                v.value?.let {
+                    if (it.size == 1) {
+                        varValues[v.name] = it[0]
+                    }
+                }
+            }
+        }
         for (function in program.functions) {
             currentFunction = function
             operations = mutableListOf()
@@ -88,7 +97,7 @@ class Generator(val program: Program) {
                     val ref = varRefs[node.name]!!
                     return Operand(ref, OperandType.Register)
                 } else {
-                    return Operand(node.name, OperandType.LocalVariable)
+                    return makeOperand(node.name)
                 }
             }
 
@@ -232,7 +241,7 @@ class Generator(val program: Program) {
 
             is ASTNode.Variable -> {
                 if (needReturnValue) {
-                    operations.add(Operation.SetResult(Operand(node.name, OperandType.LocalVariable)))
+                    operations.add(Operation.SetResult(makeOperand(node.name)))
                 }
             }
 
@@ -328,7 +337,7 @@ class Generator(val program: Program) {
             if (node.right is ASTNode.ImmediateValue) {
                 varValues[node.left.name] = node.right.value
                 varRefs.remove(node.left.name)
-                val result = Operand(node.left.name, OperandType.LocalVariable, node.right.value)
+                val result = makeOperand(node.left.name, node.right.value)
                 val operand = Operand(node.right.value.toString(), OperandType.ImmediateValue, node.right.value)
                 operations.add(Operation.Assignment(result, operand))
                 return result
@@ -336,23 +345,24 @@ class Generator(val program: Program) {
                 varRefs.remove(node.left.name)
                 if (varValues.contains(node.right.name)) {
                     varValues[node.left.name] = varValues[node.right.name]!!
-                    val result = Operand(node.left.name, OperandType.LocalVariable)
+                    val result = makeOperand(node.left.name)
                     val operand = Operand(node.right.name, OperandType.ImmediateValue, varValues[node.right.name]!!)
                     operations.add(Operation.Assignment(result, operand))
                     return result
                 } else {
                     varValues.remove(node.left.name)
-                    val result = Operand(node.left.name, OperandType.LocalVariable)
+                    val result = makeOperand(node.left.name)
                     val operand = if (varRefs.contains(node.right.name)) {
                         Operand(varRefs[node.right.name]!!, OperandType.Register)
                     } else {
-                        Operand(node.right.name, OperandType.LocalVariable)
+                        makeOperand(node.right.name)
                     }
                     operations.add(Operation.Assignment(result, operand))
                     return result
                 }
             } else {
-                val result = Operand(node.left.name, OperandType.LocalVariable)
+                varValues.remove(node.left.name)
+                val result = makeOperand(node.left.name)
                 val operand = processNode(node.right, node)
                 operations.add(Operation.Assignment(result, operand))
                 if (operand.value != null) {
@@ -394,6 +404,11 @@ class Generator(val program: Program) {
         val op = Operation.Inv(Operand(reg, OperandType.Register), n)
         operations.add(op)
         return operations.last().result
+    }
+
+    private fun makeOperand(name: String, value: Int? = null): Operand {
+        if (program.hasVariable(name)) return Operand(name, OperandType.GlobalVariable, value)
+        return Operand(name, OperandType.LocalVariable, value)
     }
 
     private fun calculate(node: ASTNode.BinaryOperation, left: Int, right: Int): Int {
