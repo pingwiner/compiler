@@ -150,4 +150,14 @@ sealed class Operation(val result: Operand) {
             return result.name + " = ~" + operand
         }
     }
+    class Load(result: Operand, val base: Operand, val index: Operand) : Operation(result) {
+        override fun toString(): String {
+            return result.name + " = ${base.name}[$index]"
+        }
+    }
+    class Store(result: Operand, val base: Operand, val index: Operand) : Operation(result) {
+        override fun toString(): String {
+            return "${base.name}[$index] = " + result.name
+        }
+    }
 }

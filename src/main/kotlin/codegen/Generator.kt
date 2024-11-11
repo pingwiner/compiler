@@ -90,6 +90,14 @@ class Generator(val program: Program) {
             }
 
             is ASTNode.Variable -> {
+                if (node.index != null) {
+                    val indexOperand = processNode(node.index)
+                    val baseOperand = makeOperand(node.name)
+                    val reg = nextRegister()
+                    val result = Operand(reg, OperandType.Register)
+                    operations.add(Operation.Load(result, baseOperand, indexOperand))
+                    return result
+                }
                 if (varValues.contains(node.name)) {
                     val v: Int = varValues[node.name]!!
                     return Operand(v.toString(), OperandType.ImmediateValue, v)
@@ -334,6 +342,9 @@ class Generator(val program: Program) {
 
     private fun processAssign(node: ASTNode.BinaryOperation.Assign): Operand {
         if (node.left is ASTNode.Variable) {
+            if (node.left.index != null) {
+                return processStore(node.left, node.right)
+            }
             if (node.right is ASTNode.ImmediateValue) {
                 varValues[node.left.name] = node.right.value
                 varRefs.remove(node.left.name)
@@ -341,7 +352,7 @@ class Generator(val program: Program) {
                 val operand = Operand(node.right.value.toString(), OperandType.ImmediateValue, node.right.value)
                 operations.add(Operation.Assignment(result, operand))
                 return result
-            } else if (node.right is ASTNode.Variable) {
+            } else if (node.right is ASTNode.Variable && node.right.index == null) {
                 varRefs.remove(node.left.name)
                 if (varValues.contains(node.right.name)) {
                     varValues[node.left.name] = varValues[node.right.name]!!
@@ -378,6 +389,14 @@ class Generator(val program: Program) {
         } else {
             throw IllegalStateException("WTF")
         }
+    }
+
+    private fun processStore(left: ASTNode.Variable, right: ASTNode): Operand {
+        val baseOperand = makeOperand(left.name)
+        val indexOperand = processNode(left.index!!)
+        val resultOperand = processNode(right)
+        operations.add(Operation.Store(resultOperand, baseOperand, indexOperand))
+        return resultOperand
     }
 
     private fun processNeg(node: ASTNode.Neg): Operand {
@@ -506,11 +525,22 @@ class Generator(val program: Program) {
                         usedVars.add(op.operand.name)
                     }
                 }
+                is Operation.Load -> {
+                    if (op.index.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.index.name)
+                    }
+                }
+                is Operation.Store -> {
+                    if (op.index.type != OperandType.ImmediateValue) {
+                        usedVars.add(op.index.name)
+                    }
+                }
             }
         }
         val newOperations = mutableListOf<Operation>()
         for (op in operations) {
-            if (usedVars.contains(op.result.name) || op is Operation.IfNot || op is Operation.Label || op is Operation.Goto) {
+            if (usedVars.contains(op.result.name) || op is Operation.IfNot || op is Operation.Label
+                || op is Operation.Goto || op is Operation.Load || op is Operation.Store) {
                 newOperations.add(op)
             }
         }

@@ -1,10 +1,10 @@
 #comment
 
-var xx = 1;
+var arr = {1, 2, 3};
 
 fun main(arg1, arg2) {
-    a = 1 + xx;
-    xx = arg1;
-    a = a + xx;
+    a = 1 + arr[0];
+    arr[a + 1] = arg1;
+    a = arr[a];
     return a;
 }
