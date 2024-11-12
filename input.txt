@@ -1,10 +1,12 @@
 #comment
 
 var arr = {1, 2, 3};
+var glob;
 
 fun main(arg1, arg2) {
     a = 1 + arr[0];
     arr[a + 1] = arg1;
     a = arr[a];
+    glob = a;
     return a;
 }

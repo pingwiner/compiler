@@ -25,7 +25,8 @@ class Variable(val name: String) {
                 .expect<Symbol>()
                 .expect<SpecialSymbol.End>().let {
                     if (!it.valid) return null
-                    return Pair(Variable((tokens[1] as Symbol).content), it.next)
+                    val result = Variable(it.get<Symbol>(1).content)
+                    return Pair(result, it.next)
                 }
         }
 

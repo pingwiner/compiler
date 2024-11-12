@@ -376,12 +376,14 @@ class Generator(val program: Program) {
                 val result = makeOperand(node.left.name)
                 val operand = processNode(node.right, node)
                 operations.add(Operation.Assignment(result, operand))
-                if (operand.value != null) {
-                    varValues[node.left.name] = operand.value
-                    varRefs.remove(node.left.name)
-                } else {
-                    if (operand.type == OperandType.Register) {
-                        varRefs[node.left.name] = operand.name
+                if (result.type == OperandType.LocalVariable) {
+                    if (operand.value != null) {
+                        varValues[node.left.name] = operand.value
+                        varRefs.remove(node.left.name)
+                    } else {
+                        if (operand.type == OperandType.Register) {
+                            varRefs[node.left.name] = operand.name
+                        }
                     }
                 }
                 return result
