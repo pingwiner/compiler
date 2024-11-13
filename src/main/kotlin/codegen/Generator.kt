@@ -248,8 +248,13 @@ class Generator(val program: Program) {
             }
 
             is ASTNode.Variable -> {
+                operations.addAll(generator.operations)
                 if (needReturnValue) {
-                    operations.add(Operation.SetResult(makeOperand(node.name)))
+                    if (generator.operations.size > 0) {
+                        operations.add(makeResult(operations.last().result))
+                    } else {
+                        operations.add(Operation.SetResult(makeOperand(node.name)))
+                    }
                 }
             }
 

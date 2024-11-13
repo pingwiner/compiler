@@ -33,7 +33,7 @@ open class Operand(
     }
 }
 
-class Default() : Operand("default", OperandType.ImmediateValue, 0)
+class Default : Operand("default", OperandType.ImmediateValue, 0)
 
 class Phi(val op1: Operand, val op2: Operand) : Operand("phi", OperandType.Phi) {
     override fun toString(): String {
@@ -71,7 +71,7 @@ enum class Operator(val op: String) {
                 is ASTNode.BinaryOperation.Eq -> EQ
                 is ASTNode.BinaryOperation.Gt -> GT
                 is ASTNode.BinaryOperation.GtEq -> GTEQ
-                is ASTNode.BinaryOperation.If -> IF
+                is ASTNode.BinaryOperation.If -> TODO()
                 is ASTNode.BinaryOperation.Lt -> LT
                 is ASTNode.BinaryOperation.LtEq -> LTEQ
                 is ASTNode.BinaryOperation.Minus -> MINUS
