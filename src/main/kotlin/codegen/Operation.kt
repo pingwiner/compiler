@@ -118,7 +118,7 @@ sealed class Operation(val result: Operand) {
             return "goto " + result.name
         }
     }
-    class Call(val label: Operand, val args: List<Operand>) : Operation(Operand(label.name+ "_ret_value", OperandType.Register)) {
+    class Call(result: Operand, val label: Operand, val args: List<Operand>) : Operation(result) {
         override fun toString(): String {
             val argsList = StringBuilder()
             argsList.append("(")
@@ -132,7 +132,7 @@ sealed class Operation(val result: Operand) {
                 argsList.append(arg.name)
             }
             argsList.append(")")
-            return "call " + label.name + argsList.toString()
+            return result.name + " = " + label.name + argsList.toString()
         }
     }
     class SetResult(op: Operand): Operation(op) {

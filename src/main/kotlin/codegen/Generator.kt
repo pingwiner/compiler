@@ -129,7 +129,9 @@ class Generator(val program: Program) {
             val callArg = processNode(arg)
             callArgs.add(callArg)
         }
-        operations.add(Operation.Call(Operand(node.name, OperandType.Label), callArgs))
+        val reg = nextRegister()
+        val result = Operand(reg, OperandType.Register)
+        operations.add(Operation.Call(result, Operand(node.name, OperandType.Label), callArgs))
         return operations.last().result
     }
 

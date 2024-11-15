@@ -3,7 +3,12 @@
 var arr = {1, 2, 3};
 var glob;
 
+fun f1(x, y) {
+    return x + y;
+}
+
 fun main(arg1, arg2) {
-    a = (arg1 > arg2) ? glob + 1: arr[1] + 2;
+    a = (arg1 > arg2) ? glob + 1: arr[1] + f1(1, 2);
+    b = a;
     return a;
 }
