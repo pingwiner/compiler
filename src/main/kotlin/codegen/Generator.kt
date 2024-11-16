@@ -35,6 +35,7 @@ class Generator(val program: Program) {
             usedVars = mutableSetOf()
             regCount = 0
             processNode(currentFunction.root!!)
+            removeTemporaryVariables()
             removeUselessOperations()
             val usedLocalVars = mutableListOf<String>()
             for (v in currentFunction.vars) {
@@ -55,72 +56,56 @@ class Generator(val program: Program) {
         processNode(node)
     }
 
-    private fun processNode(node: ASTNode, parent: ASTNode? = null): Operand {
+    private fun processNode(node: ASTNode, parent: ASTNode? = null): Operand =
         when (node) {
-            is ASTNode.BinaryOperation -> {
-                return processBinaryOperation(node, parent)
-            }
-
-            is ASTNode.While -> {
-                return processWhileOperation(node)
-            }
-
-            is ASTNode.Until -> {
-                return processUntilOperation(node)
-            }
-
-            is ASTNode.ImmediateValue -> {
-                return Operand(node.value.toString(), OperandType.ImmediateValue, node.value)
-            }
-
-            is ASTNode.FunctionCall -> {
-                return processFunctionCall(node)
-            }
-
-            is ASTNode.Neg -> {
-                return processNeg(node)
-            }
-
-            is ASTNode.Inv -> {
-                return processInv(node)
-            }
-
-            is ASTNode.Repeat -> {
-                TODO("Not implemented")
-            }
-
-            is ASTNode.Variable -> {
-                if (node.index != null) {
-                    val indexOperand = processNode(node.index)
-                    val baseOperand = makeOperand(node.name)
-                    val reg = nextRegister()
-                    val result = Operand(reg, OperandType.Register)
-                    operations.add(Operation.Load(result, baseOperand, indexOperand))
-                    return result
-                }
-                if (varValues.contains(node.name)) {
-                    val v: Int = varValues[node.name]!!
-                    return Operand(v.toString(), OperandType.ImmediateValue, v)
-                } else if (varRefs.contains(node.name)) {
-                    val ref = varRefs[node.name]!!
-                    return Operand(ref, OperandType.Register)
-                } else {
-                    return makeOperand(node.name)
-                }
-            }
-
-            is ASTNode.Block -> {
-                var result: Operand? = null
-                for (subNode in node.subNodes) {
-                    result = processNode(subNode)
-                }
-                return result ?: Default()
-            }
-            is ASTNode.Return -> {
-                return processReturn(node)
-            }
-            else -> TODO()
+            is ASTNode.BinaryOperation -> processBinaryOperation(node, parent)
+            is ASTNode.While -> processWhileOperation(node)
+            is ASTNode.Until -> processUntilOperation(node)
+            is ASTNode.ImmediateValue -> Operand(node.value.toString(), OperandType.ImmediateValue, node.value)
+            is ASTNode.FunctionCall -> processFunctionCall(node)
+            is ASTNode.Neg -> processNeg(node)
+            is ASTNode.Inv -> processInv(node)
+            is ASTNode.Repeat -> processRepeat(node)
+            is ASTNode.Variable -> processVariable(node)
+            is ASTNode.Block -> processBlock(node)
+            is ASTNode.Return -> processReturn(node)
         }
+
+    private fun processRepeat(node: ASTNode.Repeat): Operand {
+        TODO("Not implemented")
+    }
+
+    private fun processBlock(node: ASTNode.Block): Operand {
+        var result: Operand? = null
+        for (subNode in node.subNodes) {
+            result = processNode(subNode)
+        }
+        return result ?: Default()
+    }
+
+    private fun processVariable(node: ASTNode.Variable): Operand {
+        // Array access
+        if (node.index != null) {
+            val indexOperand = processNode(node.index)
+            val baseOperand = makeOperand(node.name)
+            val reg = nextRegister()
+            val result = Operand(reg, OperandType.Register)
+            operations.add(Operation.Load(result, baseOperand, indexOperand))
+            return result
+        }
+
+        // Constant propagation
+        varValues[node.name]?.let {
+            return Operand(it.toString(), OperandType.ImmediateValue, it)
+        }
+
+        // SSA register
+        varRefs[node.name]?.let {
+            return Operand(it, OperandType.Register)
+        }
+
+        // Local or global variable operand
+        return makeOperand(node.name)
     }
 
     private fun processFunctionCall(node: ASTNode.FunctionCall): Operand {
@@ -208,11 +193,13 @@ class Generator(val program: Program) {
 
         //Arithmetic and logic operations
 
+        // SSA register for result
         val reg = nextRegister()
 
         val leftVal = processNode(node.left)
         val rightVal = processNode(node.right)
 
+        // Compile-time calculations
         if (leftVal.type == OperandType.ImmediateValue && rightVal.type == OperandType.ImmediateValue) {
             val v = calculate(node, leftVal.value!!, rightVal.value!!)
             val result = Operand(reg, OperandType.ImmediateValue, v)
@@ -241,6 +228,7 @@ class Generator(val program: Program) {
         return result
     }
 
+    // If - Else branch generation
     private fun makeBranch(node: ASTNode, generator: Generator, needReturnValue: Boolean) : Operand {
         when (node) {
             is ASTNode.ImmediateValue -> {
@@ -474,7 +462,7 @@ class Generator(val program: Program) {
         println()
     }
 
-    private fun removeUselessOperations() {
+    private fun removeTemporaryVariables() {
         if (operations.isEmpty()) return
         usedVars = mutableSetOf<String>()
         for (op in operations) {
@@ -558,6 +546,107 @@ class Generator(val program: Program) {
         }
         operations.clear()
         operations.addAll(newOperations)
+    }
+
+    private fun removeUselessOperations() {
+        var removed = false
+        do {
+            removed = false
+            val toKeep = mutableListOf<Boolean>()
+            for (op in operations) {
+                when (op.result.type) {
+                    OperandType.ImmediateValue,
+                    OperandType.Label,
+                    OperandType.GlobalVariable,
+                    OperandType.Phi -> {
+                        toKeep.add(true)
+                    }
+
+                    OperandType.Register,
+                    OperandType.LocalVariable -> {
+                        val name = op.result.name
+                        if (isOperandUsed(name)) {
+                            toKeep.add(true)
+                        } else {
+                            toKeep.add(false)
+                            removed = true
+                        }
+                    }
+                }
+            }
+            val newOperations = mutableListOf<Operation>()
+            var i = 0
+            for (op in operations) {
+                if (toKeep[i]) {
+                    newOperations.add(op)
+                }
+                i += 1
+            }
+            operations.clear()
+            operations.addAll(newOperations)
+        } while (removed)
+    }
+
+    private fun isOperandUsed(name: String): Boolean {
+        for (op in operations) {
+            when (op) {
+                is Operation.BinaryOperation -> {
+                    if (op.operand1.name == name || op.operand2.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Assignment -> {
+                    if (op.operand.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Call -> {
+                    for (arg in op.args) {
+                        if (arg.name == name) {
+                            return true
+                        }
+                    }
+                }
+                is Operation.Goto -> {}
+                is Operation.IfNot -> {
+                    if (op.condition.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Inv -> {
+                    if (op.operand.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Label -> {}
+                is Operation.Load -> {
+                    if (op.index.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Neg -> {
+                    if (op.operand.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Return -> {
+                    if (op.result.name == name) {
+                        return true
+                    }
+                }
+                is Operation.SetResult -> {
+                    if (op.result.name == name) {
+                        return true
+                    }
+                }
+                is Operation.Store -> {
+                    if (op.index.name == name) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
 
     private fun processReturn(node: ASTNode.Return) : Operand {
