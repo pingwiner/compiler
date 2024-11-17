@@ -37,6 +37,8 @@ class Generator(val program: Program) {
             processNode(currentFunction.root!!)
             removeTemporaryVariables()
             removeUselessOperations()
+            removeUselessIf()
+            removeUselessOperations()
             val usedLocalVars = mutableListOf<String>()
             for (v in currentFunction.vars) {
                 if (usedVars.contains(v)) usedLocalVars.add(v)
@@ -647,6 +649,45 @@ class Generator(val program: Program) {
             }
         }
         return false
+    }
+
+    private fun removeUselessIf() {
+        var prevOp: Operation? = null
+        var prevOp2: Operation? = null
+        var prevOp3: Operation? = null
+        var i = 0
+        val toRemove = mutableListOf<Int>()
+        for (op in operations) {
+            if (op is Operation.Label) {
+                if (prevOp is Operation.IfNot) {
+                    if (op.result.name == prevOp.result.name) {
+                        toRemove.add(i - 1)
+                        toRemove.add(i)
+                    }
+                } else if ((prevOp is Operation.Label) && (prevOp2 is Operation.Goto) && (prevOp3 is Operation.IfNot)) {
+                    if ((op.result.name == prevOp2.result.name) && (prevOp.result.name == prevOp3.result.name)) {
+                        toRemove.add(i - 3)
+                        toRemove.add(i - 2)
+                        toRemove.add(i - 1)
+                        toRemove.add(i)
+                    }
+                }
+            }
+            prevOp3 = prevOp2
+            prevOp2 = prevOp
+            prevOp = op
+            i++
+        }
+        val newOperations = mutableListOf<Operation>()
+        i = 0
+        for (op in operations) {
+            if (!toRemove.contains(i)) {
+                newOperations.add(op)
+            }
+            i++
+        }
+        operations.clear()
+        operations.addAll(newOperations)
     }
 
     private fun processReturn(node: ASTNode.Return) : Operand {
