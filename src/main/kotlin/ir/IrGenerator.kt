@@ -4,7 +4,7 @@ import org.pingwiner.compiler.parser.ASTNode
 import org.pingwiner.compiler.parser.Program
 import org.pingwiner.compiler.parser.Function
 
-class Generator(val program: Program) {
+class IrGenerator(val program: Program) {
     private val varValues = mutableMapOf<String, Int>()
     private val varRefs = mutableMapOf<String, String>()
     companion object {
@@ -125,11 +125,11 @@ class Generator(val program: Program) {
     private fun processUntilOperation(node: ASTNode.Until): Operand {
         val labelStart = nextLabel()
         operations.add(Operation.Label(labelStart))
-        val genStatement = Generator(program)
+        val genStatement = IrGenerator(program)
         genStatement.generateFrom(node.statement)
         operations.addAll(genStatement.operations)
         val result = operations.last().result
-        val genCondition = Generator(program)
+        val genCondition = IrGenerator(program)
         genCondition.generateFrom(node.condition)
         operations.addAll(genCondition.operations)
         operations.add(jumpIfNot(operations.last().result, labelStart))
@@ -138,17 +138,17 @@ class Generator(val program: Program) {
         return result
     }
 
-    private fun clearRefs(generator: Generator) {
-        for (ref in generator.varRefs.keys) {
+    private fun clearRefs(irGenerator: IrGenerator) {
+        for (ref in irGenerator.varRefs.keys) {
             varRefs.remove(ref)
         }
-        for (ref in generator.varValues.keys) {
+        for (ref in irGenerator.varValues.keys) {
             varValues.remove(ref)
         }
     }
 
     private fun processWhileOperation(node: ASTNode.While): Operand {
-        val genCondition = Generator(program)
+        val genCondition = IrGenerator(program)
         genCondition.generateFrom(node.condition)
         val labelStart = nextLabel()
         val labelEnd = nextLabel()
@@ -157,7 +157,7 @@ class Generator(val program: Program) {
         clearRefs(genCondition)
         operations.add(jumpIfNot(operations.last().result, labelEnd))
 
-        val genStatement = Generator(program)
+        val genStatement = IrGenerator(program)
         genStatement.generateFrom(node.statement)
         operations.addAll(genStatement.operations)
         clearRefs(genStatement)
@@ -231,7 +231,7 @@ class Generator(val program: Program) {
     }
 
     // If - Else branch generation
-    private fun makeBranch(node: ASTNode, generator: Generator, needReturnValue: Boolean) : Operand {
+    private fun makeBranch(node: ASTNode, irGenerator: IrGenerator, needReturnValue: Boolean) : Operand {
         when (node) {
             is ASTNode.ImmediateValue -> {
                 if (needReturnValue) {
@@ -240,9 +240,9 @@ class Generator(val program: Program) {
             }
 
             is ASTNode.Variable -> {
-                operations.addAll(generator.operations)
+                operations.addAll(irGenerator.operations)
                 if (needReturnValue) {
-                    if (generator.operations.size > 0) {
+                    if (irGenerator.operations.size > 0) {
                         operations.add(makeResult(operations.last().result))
                     } else {
                         operations.add(Operation.SetResult(makeOperand(node.name)))
@@ -251,9 +251,9 @@ class Generator(val program: Program) {
             }
 
             else -> {
-                operations.addAll(generator.operations)
+                operations.addAll(irGenerator.operations)
                 if (needReturnValue) {
-                    if (generator.operations.size > 0) {
+                    if (irGenerator.operations.size > 0) {
                         operations.add(makeResult(operations.last().result))
                     } else {
                         operations.add(Operation.SetResult(Default()))
@@ -286,7 +286,7 @@ class Generator(val program: Program) {
     }
 
     private fun processIf(node: ASTNode.BinaryOperation.If, parent: ASTNode? = null): Operand {
-        val condition = Generator(program)
+        val condition = IrGenerator(program)
         condition.generateFrom(node.left)
         val opCount = operations.size
         operations.addAll(condition.operations)
@@ -300,13 +300,13 @@ class Generator(val program: Program) {
         val needReturnValue = parent is ASTNode.BinaryOperation.Assign
         var hasUsefulOperations = false
         if (node.right is ASTNode.BinaryOperation.Else) {
-            val thenBranch = Generator(program)
+            val thenBranch = IrGenerator(program)
             thenBranch.generateFrom(node.right.left)
             result1 = makeBranch(node.right.left, thenBranch, needReturnValue)
             operations.add(jump(label2))
             operations.add(Operation.Label(label))
 
-            val elseBranch = Generator(program)
+            val elseBranch = IrGenerator(program)
             elseBranch.generateFrom(node.right.right)
             result2 = makeBranch(node.right.right, elseBranch, needReturnValue)
             operations.add(Operation.Label(label2))
@@ -317,7 +317,7 @@ class Generator(val program: Program) {
                 clearRefs(elseBranch)
             }
         } else {
-            val thenBranch = Generator(program)
+            val thenBranch = IrGenerator(program)
             thenBranch.generateFrom(node.right)
             result1 = makeBranch(node.right, thenBranch, needReturnValue)
             operations.add(Operation.Label(label))

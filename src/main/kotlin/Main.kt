@@ -1,6 +1,6 @@
 package org.pingwiner.compiler
 
-import org.pingwiner.compiler.codegen.Generator
+import org.pingwiner.compiler.codegen.IrGenerator
 import org.pingwiner.compiler.parser.Parser
 
 fun main() {
@@ -10,7 +10,7 @@ fun main() {
     //lexer.printTokens()
     val parser = Parser()
     val program = parser.parse(lexer.tokens)
-    val generator = Generator(program)
-    generator.generate()
+    val irGenerator = IrGenerator(program)
+    irGenerator.generate()
     println("")
 }
