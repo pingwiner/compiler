@@ -37,8 +37,17 @@ class Lexer {
     var line = 1
     var position = 1
 
+    fun reset() {
+        tokens.clear()
+        state = State.SPACE
+        currentToken = StringBuilder()
+        hexMode = false
+        line = 1
+        position = 1
+    }
+
     fun scan(input: String) {
-        for (c in input) {
+        for (c in "$input ") {
             when(state) {
                 State.SPACE -> space(c)
                 State.NUMBER -> number(c)
