@@ -1,0 +1,9 @@
+var a = 1;
+var b;
+var arr1 = {1, 2, 3};  
+var arr2[10];
+
+fun main() {
+	arr2[1] = 2;
+	return a + b - arr1[0];
+}
