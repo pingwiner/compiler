@@ -18,7 +18,7 @@ class ParserTest {
         val parser = Parser()
         val program = parser.parse(lexer.tokens)
         assertEquals(4, program.globalVars.size)
-        assertEquals(2, program.functions.size)
+        assertEquals(3, program.functions.size)
 
         assertEquals(1, program.globalVars["a"]?.size)
         assertEquals(1, program.globalVars["b"]?.size)
@@ -40,5 +40,10 @@ class ParserTest {
         assertIs<ASTNode.BinaryOperation.Assign>(mainRoot.subNodes[0])
         assertIs<ASTNode.BinaryOperation.Assign>(mainRoot.subNodes[1])
         assertIs<ASTNode.Return>(mainRoot.subNodes[2])
+
+        val block = program.functions[2].root as ASTNode.Block
+        assertIs<ASTNode.BinaryOperation.Assign>(block.subNodes[0])
+        assertIs<ASTNode.While>(block.subNodes[1])
+        assertIs<ASTNode.Until>(block.subNodes[2])
     }
 }

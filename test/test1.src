@@ -16,3 +16,9 @@ fun main() {
 	arr2[1] = 2;
 	return a + b - arr1[0] * c;
 }
+
+fun f2() {
+    x = 1;
+    {x = x + 1} while (x < 10);
+    {x = x - 1} until (x == 0);
+}
