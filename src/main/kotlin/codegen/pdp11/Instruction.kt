@@ -1,7 +1,5 @@
 package org.pingwiner.compiler.codegen.pdp11
 
-import java.nio.ByteBuffer
-
 enum class Mode(val value: Int) {
     Reg(0),
     RegDef(1),
@@ -33,14 +31,27 @@ abstract class Instruction(val name: String) {
     fun asWord(): UShort = value().toUShort()
 }
 
-class Mov(val src: Operand, val dst: Operand) : Instruction("MOV") {
+open class DoubleOperandInstruction(name: String, val src: Operand, val dst: Operand, val byteOperation: Boolean, val opcode: Int) : Instruction(name) {
     override fun value(): Int {
-        return (1 shl 12) + (src.value() shl 6) or dst.value()
+        var result: Int = ((opcode and 7) shl 12) + (src.value() shl 6) or dst.value()
+        if (byteOperation) {
+            result = result or (1 shl 15)
+        }
+        return result
     }
 }
 
-class Movb(val src: Operand, val dst: Operand) : Instruction("MOVB") {
-    override fun value(): Int {
-        return (0b1001 shl 12) + (src.value() shl 6) or dst.value()
-    }
-}
+class Mov(src: Operand, dst: Operand) : DoubleOperandInstruction("MOV", src, dst, false, 1)
+class Movb(src: Operand, dst: Operand) : DoubleOperandInstruction("MOVB", src, dst, true, 1)
+class Cmp(src: Operand, dst: Operand) : DoubleOperandInstruction("CMP", src, dst, false, 2)
+class Cmpb(src: Operand, dst: Operand) : DoubleOperandInstruction("CMPB", src, dst, true, 2)
+class Bit(src: Operand, dst: Operand) : DoubleOperandInstruction("BIT", src, dst, false, 3)
+class Bitb(src: Operand, dst: Operand) : DoubleOperandInstruction("BIT", src, dst, true, 3)
+class Bic(src: Operand, dst: Operand) : DoubleOperandInstruction("BIC", src, dst, false, 4)
+class Bicb(src: Operand, dst: Operand) : DoubleOperandInstruction("BICB", src, dst, true, 4)
+class Bis(src: Operand, dst: Operand) : DoubleOperandInstruction("BIC", src, dst, false, 5)
+class Bisb(src: Operand, dst: Operand) : DoubleOperandInstruction("BIC", src, dst, true, 5)
+class Add(src: Operand, dst: Operand) : DoubleOperandInstruction("ADD", src, dst, false, 6)
+class Sub(src: Operand, dst: Operand) : DoubleOperandInstruction("SUB", src, dst, true, 6)
+
+
