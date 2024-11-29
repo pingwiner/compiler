@@ -221,3 +221,44 @@ class Bcc(dst: Int) : BranchInstruction("BCC", 0b1000_0110, dst)
 
 // Branch if carry set
 class Bcs(dst: Int) : BranchInstruction("BCS", 0b1000_0111, dst)
+
+open class SpecialInstruction(name: String, val opcode: Int) : Instruction(name) {
+    override fun value(): Int {
+        return opcode
+    }
+}
+
+// Stop CPU until interrupt
+class Halt() : SpecialInstruction("HALT", 0)
+
+// Clear C flag
+class Clc() : SpecialInstruction("CLC", oct(241))
+
+// Clear V flag
+class Clv() : SpecialInstruction("CLV", oct(242))
+
+// Clear Z flag
+class Clz() : SpecialInstruction("CLZ", oct(244))
+
+// Clear N flag
+class Cln() : SpecialInstruction("CLN", oct(250))
+
+// Clear all flags
+class Ccc() : SpecialInstruction("CCC", oct(257))
+
+// Set C flag
+class Sec() : SpecialInstruction("SEC", oct(261))
+
+// Set V flag
+class Sev() : SpecialInstruction("SEV", oct(262))
+
+// Set Z flag
+class Sez() : SpecialInstruction("SEZ", oct(264))
+
+// Set N flag
+class Sen() : SpecialInstruction("SEN", oct(270))
+
+// Set all flags
+class Scc() : SpecialInstruction("SCC", oct(277))
+
+
