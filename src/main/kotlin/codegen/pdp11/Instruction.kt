@@ -228,7 +228,7 @@ open class SpecialInstruction(name: String, val opcode: Int) : Instruction(name)
     }
 }
 
-// Stop CPU until interrupt
+// Stop CPU
 class Halt() : SpecialInstruction("HALT", 0)
 
 // Clear C flag
@@ -261,4 +261,30 @@ class Sen() : SpecialInstruction("SEN", oct(270))
 // Set all flags
 class Scc() : SpecialInstruction("SCC", oct(277))
 
+// Call subroutine
+class Call(val dst: Operand) : SpecialInstruction("CALL", 0b0000_100_111_000000) {
+    override fun value(): Int {
+        return opcode or (dst.value() and 0b111111)
+    }
+}
+
+class Ret() : SpecialInstruction("RET", 0b0000_0000_1000_0111)
+
+class Jmp(val dst: Operand) : SpecialInstruction("JMP", 0b0000_0000_01_000000) {
+    override fun value(): Int {
+        return opcode or (dst.value() and 0b111111)
+    }
+}
+
+// Wait for interrupt
+class Wait() : SpecialInstruction("WAIT", 1)
+
+// Return from interrupt
+class Rti() : SpecialInstruction("RTI", 2)
+
+// Breakpoint trap
+class Bpt() : SpecialInstruction("BPT", 4)
+
+// Reset. Initializes the system
+class Reset() : SpecialInstruction("RST", 5)
 
