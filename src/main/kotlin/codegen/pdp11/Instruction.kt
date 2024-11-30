@@ -57,7 +57,7 @@ open class DoubleOperandInstruction(name: String, val src: Operand, val dst: Ope
 }
 
 // Moves a value from source to destination.
-class Mov(src: Operand, dst: Operand) : DoubleOperandInstruction("MOV", src, dst, false, 1)
+open class Mov(src: Operand, dst: Operand) : DoubleOperandInstruction("MOV", src, dst, false, 1)
 class Movb(src: Operand, dst: Operand) : DoubleOperandInstruction("MOVB", src, dst, true, 1)
 
 // Compares values by subtracting the destination from the source, setting the condition codes, and then discarding the result of the subtraction.
@@ -288,3 +288,8 @@ class Bpt() : SpecialInstruction("BPT", 4)
 // Reset. Initializes the system
 class Reset() : SpecialInstruction("RST", 5)
 
+// Push operand to stack
+class Push(src: Operand) : Mov(src, Operand(Mode.AutoDec, Reg.SP))
+
+// Pop operand from stack
+class Pop(dst: Operand) : Mov(Operand(Mode.AutoInc, Reg.SP), dst)
