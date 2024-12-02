@@ -1,5 +1,7 @@
 package org.pingwiner.compiler
 
+import org.pingwiner.compiler.Operator.Minus
+
 enum class State {
     SPACE,
     NUMBER,
@@ -107,12 +109,31 @@ class Lexer {
                 return
             }
             val format = HexFormat { number.prefix = "0x" }
-            val intValue = if (hexMode) currentToken.toString().hexToInt(format) else currentToken.toString().toInt()
+            var intValue = if (hexMode) currentToken.toString().hexToInt(format) else currentToken.toString().toInt()
+
+            if (isUnaryMinus()) {
+                intValue = -intValue
+                tokens.remove(tokens.last())
+            }
+
             tokens.add(Number(intValue, line, position - currentToken.length))
             currentToken.clear()
             state = State.SPACE
             space(c)
         }
+    }
+
+    private fun isUnaryMinus(): Boolean {
+        if (tokens.isEmpty()) return false
+        if (tokens.size < 2) return false
+        val lastToken = tokens.last()
+        val prevLastToken = tokens[tokens.size - 2]
+        return (lastToken is Minus) && (
+                (prevLastToken is Operator) ||
+                (prevLastToken is SpecialSymbol.LBrace) ||
+                (prevLastToken is SpecialSymbol.LSquare) ||
+                (prevLastToken is SpecialSymbol.LCurl) ||
+                (prevLastToken is SpecialSymbol.Comma))
     }
 
     private fun word(c: Char) {
