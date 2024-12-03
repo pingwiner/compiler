@@ -133,7 +133,8 @@ class Lexer {
                 (prevLastToken is SpecialSymbol.LBrace) ||
                 (prevLastToken is SpecialSymbol.LSquare) ||
                 (prevLastToken is SpecialSymbol.LCurl) ||
-                (prevLastToken is SpecialSymbol.Comma))
+                (prevLastToken is SpecialSymbol.Comma) ||
+                (prevLastToken is SpecialSymbol.End))
     }
 
     private fun word(c: Char) {
