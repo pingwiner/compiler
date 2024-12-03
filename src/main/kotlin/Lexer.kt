@@ -87,6 +87,12 @@ class Lexer {
             //Try to parse known special symbols
             val specialSymbol = SpecialSymbol.parse(c, line, position)
             if (specialSymbol != null) {
+                if (specialSymbol is SpecialSymbol.LBrace) {
+                    if (isUnaryMinus()) {
+                        tokens.remove(tokens.last())
+                        tokens.add(Symbol("neg", line, position))
+                    }
+                }
                 tokens.add(specialSymbol)
             } else if (c == '#') {
                 state = State.COMMENT
