@@ -1,6 +1,7 @@
 package org.pingwiner.compiler
 
 import org.pingwiner.compiler.Operator.Minus
+import org.pingwiner.compiler.Operator.Inv
 
 enum class State {
     SPACE,
@@ -13,7 +14,7 @@ enum class State {
 const val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 const val digits = "0123456789"
 const val hexDigits = "0123456789abcdefABCDEF"
-const val ops = "+-*/=<>?:&|%^!"
+const val ops = "+-*/=<>?:&|%^!~"
 
 fun Char.isLetter(): Boolean {
     return letters.contains(this)
@@ -91,6 +92,9 @@ class Lexer {
                     if (isUnaryMinus()) {
                         tokens.remove(tokens.last())
                         tokens.add(Symbol("neg", line, position))
+                    } else if (isUnaryInv()) {
+                        tokens.remove(tokens.last())
+                        tokens.add(Symbol("inv", line, position))
                     }
                 }
                 tokens.add(specialSymbol)
@@ -120,6 +124,9 @@ class Lexer {
             if (isUnaryMinus()) {
                 intValue = -intValue
                 tokens.remove(tokens.last())
+            } else if (isUnaryInv()) {
+                intValue = intValue.inv()
+                tokens.remove(tokens.last())
             }
 
             tokens.add(Number(intValue, line, position - currentToken.length))
@@ -141,6 +148,20 @@ class Lexer {
                 (prevLastToken is SpecialSymbol.LCurl) ||
                 (prevLastToken is SpecialSymbol.Comma) ||
                 (prevLastToken is SpecialSymbol.End))
+    }
+
+    private fun isUnaryInv(): Boolean {
+        if (tokens.isEmpty()) return false
+        if (tokens.size < 2) return false
+        val lastToken = tokens.last()
+        val prevLastToken = tokens[tokens.size - 2]
+        return (lastToken is Inv) && (
+                (prevLastToken is Operator) ||
+                        (prevLastToken is SpecialSymbol.LBrace) ||
+                        (prevLastToken is SpecialSymbol.LSquare) ||
+                        (prevLastToken is SpecialSymbol.LCurl) ||
+                        (prevLastToken is SpecialSymbol.Comma) ||
+                        (prevLastToken is SpecialSymbol.End))
     }
 
     private fun word(c: Char) {

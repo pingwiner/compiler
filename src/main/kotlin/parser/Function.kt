@@ -379,6 +379,7 @@ class Function(val name: String, val params: List<String>) {
             is Operator.And -> ASTNode.BinaryOperation.And(left, right)
             is Operator.Xor -> ASTNode.BinaryOperation.Xor(left, right)
             is Operator.Mod -> ASTNode.BinaryOperation.Mod(left, right)
+            is Operator.Inv -> TODO()
         }
     }
 
