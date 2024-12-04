@@ -136,18 +136,21 @@ class Lexer {
         }
     }
 
+    private fun isUnaryOperation(token: Token): Boolean {
+        return (token is Operator) ||
+                (token is SpecialSymbol.LBrace) ||
+                (token is SpecialSymbol.LSquare) ||
+                (token is SpecialSymbol.LCurl) ||
+                (token is SpecialSymbol.Comma) ||
+                (token is SpecialSymbol.End)
+    }
+
     private fun isUnaryMinus(): Boolean {
         if (tokens.isEmpty()) return false
         if (tokens.size < 2) return false
         val lastToken = tokens.last()
         val prevLastToken = tokens[tokens.size - 2]
-        return (lastToken is Minus) && (
-                (prevLastToken is Operator) ||
-                (prevLastToken is SpecialSymbol.LBrace) ||
-                (prevLastToken is SpecialSymbol.LSquare) ||
-                (prevLastToken is SpecialSymbol.LCurl) ||
-                (prevLastToken is SpecialSymbol.Comma) ||
-                (prevLastToken is SpecialSymbol.End))
+        return (lastToken is Minus) && isUnaryOperation(prevLastToken)
     }
 
     private fun isUnaryInv(): Boolean {
@@ -155,13 +158,7 @@ class Lexer {
         if (tokens.size < 2) return false
         val lastToken = tokens.last()
         val prevLastToken = tokens[tokens.size - 2]
-        return (lastToken is Inv) && (
-                (prevLastToken is Operator) ||
-                        (prevLastToken is SpecialSymbol.LBrace) ||
-                        (prevLastToken is SpecialSymbol.LSquare) ||
-                        (prevLastToken is SpecialSymbol.LCurl) ||
-                        (prevLastToken is SpecialSymbol.Comma) ||
-                        (prevLastToken is SpecialSymbol.End))
+        return (lastToken is Inv) && isUnaryOperation(prevLastToken)
     }
 
     private fun word(c: Char) {
