@@ -1,6 +1,8 @@
 package org.pingwiner.compiler.codegen.pdp11
 
 import org.pingwiner.compiler.codegen.Generator
+import org.pingwiner.compiler.codegen.Operand
+import org.pingwiner.compiler.codegen.OperandType
 import org.pingwiner.compiler.codegen.Operation
 import org.pingwiner.compiler.parser.Program
 import kotlin.jvm.Throws
@@ -39,6 +41,58 @@ class PDP11Generator(program: Program) : Generator(program) {
             offset += 2
         }
         throw IllegalArgumentException("Function $funcName has no local variable $varName")
+    }
+
+    private fun checkOperand(operand: Operand, index: Int, map: MutableMap<String, Int>) {
+        if (operand.type == OperandType.Register) {
+            map[operand.name] = index
+        }
+    }
+
+    fun regUsage(operations: List<Operation>) : Map<String, Int> {
+        var i = 0
+        val result = mutableMapOf<String, Int>()
+        for (op in operations) {
+            when (op) {
+                is Operation.BinaryOperation -> {
+                    checkOperand(op.operand1, i, result)
+                    checkOperand(op.operand2, i, result)
+                }
+                is Operation.Assignment -> {
+                    checkOperand(op.operand, i, result)
+                }
+                is Operation.Call -> {
+                    for (arg in op.args) {
+                        checkOperand(arg, i, result)
+                    }
+                }
+                is Operation.Goto -> {}
+                is Operation.IfNot -> {
+                    checkOperand(op.condition, i, result)
+                }
+                is Operation.Inv -> {
+                    checkOperand(op.operand, i, result)
+                }
+                is Operation.Label -> {}
+                is Operation.Load -> {
+                    checkOperand(op.index, i, result)
+                }
+                is Operation.Neg -> {
+                    checkOperand(op.operand, i, result)
+                }
+                is Operation.Return -> {
+                    checkOperand(op.result, i, result)
+                }
+                is Operation.SetResult -> {
+                    checkOperand(op.result, i, result)
+                }
+                is Operation.Store -> {
+                    checkOperand(op.index, i, result)
+                }
+            }
+            i++
+        }
+        return result
     }
 
     override fun generate(operations: List<Operation>): ByteArray {

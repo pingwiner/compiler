@@ -5,6 +5,9 @@ fun f1(x, y) {
 }
 
 fun main(arg1, arg2) {
-    a = ~(3 - 3);
-    return 1 + a;
+    a = 1;
+    a = a + arg1;
+    b = arg2 + 2;
+    a = a + 1;
+    return  a + b;
 }
