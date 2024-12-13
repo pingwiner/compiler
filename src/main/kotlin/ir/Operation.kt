@@ -20,6 +20,10 @@ open class Operand(
         return type == OperandType.ImmediateValue && value == 0
     }
 
+    fun isOne(): Boolean {
+        return type == OperandType.ImmediateValue && value == 1
+    }
+
     override fun toString(): String {
         if (type == OperandType.ImmediateValue) {
             return "$value"

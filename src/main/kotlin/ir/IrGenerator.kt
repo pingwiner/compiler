@@ -225,6 +225,17 @@ class IrGenerator(val program: Program) {
             return result
         }
 
+        val useless = when (operator) {
+            Operator.MULTIPLY -> leftVal.isOne() || rightVal.isOne()
+            Operator.DIVIDE -> rightVal.isOne()
+            Operator.PLUS -> leftVal.isZero() || rightVal.isZero()
+            Operator.MINUS -> rightVal.isZero()
+            Operator.OR -> leftVal.isZero() || rightVal.isZero()
+            Operator.SHL -> rightVal.isZero()
+            Operator.SHR -> rightVal.isZero()
+            else -> false
+        }
+
         val result = Operand(reg, OperandType.Register)
         operations.add(Operation.BinaryOperation(result, leftVal, rightVal, operator))
         return result

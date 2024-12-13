@@ -43,15 +43,29 @@ class PDP11Generator(program: Program) : Generator(program) {
         throw IllegalArgumentException("Function $funcName has no local variable $varName")
     }
 
-    private fun checkOperand(operand: Operand, index: Int, map: MutableMap<String, Int>) {
+    private fun checkOperand(operand: Operand, index: Int, map: MutableMap<String, Pair<Int, Int>>) {
         if (operand.type == OperandType.Register) {
-            map[operand.name] = index
+            if (!map.containsKey(operand.name)) {
+                map[operand.name] = Pair(index, index)
+            } else {
+                val oldVal = map[operand.name]
+                oldVal?.let {
+                    map[operand.name] = it.copy(second = index)
+                }
+            }
+
         }
     }
 
-    fun regUsage(operations: List<Operation>) : Map<String, Int> {
+    private fun isRegUsed(name: String, index: Int, map: Map<String, Pair<Int, Int>>): Boolean {
+        val v = map[name] ?: return false
+        return (v.first <= index) and (v.second >= index)
+    }
+
+
+    fun regUsage(operations: List<Operation>) : Map<String, Pair<Int, Int>> {
         var i = 0
-        val result = mutableMapOf<String, Int>()
+        val result = mutableMapOf<String, Pair<Int, Int>>()
         for (op in operations) {
             when (op) {
                 is Operation.BinaryOperation -> {
