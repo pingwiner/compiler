@@ -127,6 +127,7 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     override fun generate(operations: List<Operation>): ByteArray {
+        val pdpOperations = mutableListOf<Instruction>()
         val usage = getRegUsage(operations)
         for (i in 0..operations.size - 1) {
             val regs = usage.getUsedRegs(i)
@@ -139,8 +140,34 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
 
         val result = byteArrayOf()
-        /*
-        for (op in operations) {
+        var skipNext = false
+        for ((i, op) in operations.withIndex()) {
+            if (skipNext) {
+                skipNext = false
+                continue
+            }
+            if (op != operations.last()) {
+                if (op is Operation.BinaryOperation) {
+                    if (op.result.type == OperandType.Register) {
+                        val nextOp = operations[i + 1]
+                        if (nextOp is Operation.Assignment) {
+                            if (nextOp.operand.type == OperandType.Register) {
+                                if (nextOp.operand.name == op.result.name) {
+                                    if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
+                                        pdpOperations.add(create2OperandInstruction(op, 1))
+                                        skipNext = true
+                                        continue
+                                    } else if ((op.operand2.name == nextOp.result.name) && (op.operand2.type == OperandType.LocalVariable)) {
+                                        pdpOperations.add(create2OperandInstruction(op, 2))
+                                        skipNext = true
+                                        continue
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             when (op) {
                 is Operation.Assignment -> assign(op)
                 is Operation.BinaryOperation -> TODO()
@@ -156,8 +183,12 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Store -> TODO()
             }
         }
-        */
+
         return result
+    }
+
+    private fun create2OperandInstruction(operation: Operation, destination: Int): DoubleOperandInstruction {
+        TODO()
     }
 
     fun assign(op: Operation.Assignment) {
