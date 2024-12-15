@@ -5,7 +5,6 @@ import org.pingwiner.compiler.codegen.Operand
 import org.pingwiner.compiler.codegen.OperandType
 import org.pingwiner.compiler.codegen.Operation
 import org.pingwiner.compiler.parser.Program
-import kotlin.jvm.Throws
 
 class PDP11Generator(program: Program) : Generator(program) {
     private val globalVarsAllocMap = mutableMapOf<String, Int>()
@@ -43,74 +42,104 @@ class PDP11Generator(program: Program) : Generator(program) {
         throw IllegalArgumentException("Function $funcName has no local variable $varName")
     }
 
-    private fun checkOperand(operand: Operand, index: Int, map: MutableMap<String, Pair<Int, Int>>) {
-        if (operand.type == OperandType.Register) {
-            if (!map.containsKey(operand.name)) {
-                map[operand.name] = Pair(index, index)
-            } else {
-                val oldVal = map[operand.name]
-                oldVal?.let {
-                    map[operand.name] = it.copy(second = index)
+    class RegUsage {
+        private val data = mutableMapOf<String, Pair<Int, Int>>()
+
+        fun create(op: Operand, index: Int) {
+            if (op.type == OperandType.Register) {
+                if (!data.containsKey(op.name)) {
+                    data[op.name] = Pair(index, index)
+                } else {
+                    use(op, index)
                 }
             }
+        }
+        
+        fun use(op: Operand, index: Int) {
+            if (op.type == OperandType.Register) {
+                val oldVal = data[op.name]
+                data[op.name] = oldVal!!.copy(second = index)
+            }            
+        }
 
+        fun isRegUsed(name: String, index: Int): Boolean {
+            val v = data[name] ?: return false
+            return (v.first <= index) and (v.second >= index)
+        }
+        
+        fun getUsedRegs(index: Int): Set<String> {
+            val result = mutableSetOf<String>()
+            val regs = data.keys
+            for (reg in regs) {
+                if (isRegUsed(reg, index)) {
+                    result.add(reg)
+                }
+            }
+            return result
         }
     }
 
-    private fun isRegUsed(name: String, index: Int, map: Map<String, Pair<Int, Int>>): Boolean {
-        val v = map[name] ?: return false
-        return (v.first <= index) and (v.second >= index)
-    }
-
-
-    fun regUsage(operations: List<Operation>) : Map<String, Pair<Int, Int>> {
+    fun getRegUsage(operations: List<Operation>): RegUsage {
         var i = 0
-        val result = mutableMapOf<String, Pair<Int, Int>>()
+        val usage = RegUsage()
         for (op in operations) {
+            usage.create(op.result, i)
             when (op) {
                 is Operation.BinaryOperation -> {
-                    checkOperand(op.operand1, i, result)
-                    checkOperand(op.operand2, i, result)
+                    usage.use(op.operand1, i)
+                    usage.use(op.operand2, i)
                 }
                 is Operation.Assignment -> {
-                    checkOperand(op.operand, i, result)
+                    usage.use(op.operand, i)
                 }
                 is Operation.Call -> {
                     for (arg in op.args) {
-                        checkOperand(arg, i, result)
+                        usage.use(arg, i)
                     }
                 }
                 is Operation.Goto -> {}
                 is Operation.IfNot -> {
-                    checkOperand(op.condition, i, result)
+                    usage.use(op.condition, i)
                 }
                 is Operation.Inv -> {
-                    checkOperand(op.operand, i, result)
+                    usage.use(op.operand, i)
                 }
                 is Operation.Label -> {}
                 is Operation.Load -> {
-                    checkOperand(op.index, i, result)
+                    usage.use(op.index, i)
                 }
                 is Operation.Neg -> {
-                    checkOperand(op.operand, i, result)
+                    usage.use(op.operand, i)
                 }
                 is Operation.Return -> {
-                    checkOperand(op.result, i, result)
+                    usage.use(op.result, i)
                 }
                 is Operation.SetResult -> {
-                    checkOperand(op.result, i, result)
+                    usage.use(op.result, i)
                 }
                 is Operation.Store -> {
-                    checkOperand(op.index, i, result)
+                    usage.use(op.index, i)
                 }
             }
             i++
         }
-        return result
+        return usage
     }
 
     override fun generate(operations: List<Operation>): ByteArray {
+        val usage = getRegUsage(operations)
+        for (i in 0..operations.size - 1) {
+            val regs = usage.getUsedRegs(i)
+            val sb = StringBuilder()
+            for (r in regs) {
+                sb.append(r)
+                if (r != regs.last()) sb.append(", ")
+            }
+            println(sb.toString())
+        }
+
         val result = byteArrayOf()
+        /*
         for (op in operations) {
             when (op) {
                 is Operation.Assignment -> assign(op)
@@ -127,6 +156,7 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Store -> TODO()
             }
         }
+        */
         return result
     }
 

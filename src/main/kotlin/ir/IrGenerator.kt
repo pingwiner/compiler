@@ -1,5 +1,6 @@
 package org.pingwiner.compiler.codegen
 
+import org.pingwiner.compiler.codegen.pdp11.PDP11Generator
 import org.pingwiner.compiler.parser.ASTNode
 import org.pingwiner.compiler.parser.Program
 import org.pingwiner.compiler.parser.Function
@@ -51,6 +52,8 @@ class IrGenerator(val program: Program) {
                 operations
             )
             printOperations()
+            val gen = PDP11Generator(program)
+            gen.generate(operations)
         }
     }
 

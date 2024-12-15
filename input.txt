@@ -1,13 +1,12 @@
 #comment
 
-fun f1(x, y) {
-    return x + y;
-}
+var vvv = 1;
 
 fun main(arg1, arg2) {
     a = 1;
     a = a + arg1;
     b = arg2 + 2;
-    a = a + 0;
+    a = a + vvv;
+    vvv = a;
     return  a + b;
 }
