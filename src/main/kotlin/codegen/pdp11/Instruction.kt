@@ -75,8 +75,8 @@ class Bicb(src: Operand, dst: Operand) : DoubleOperandInstruction("BICB", src, d
 
 // For each bit set in the source, that bit is set in the destination.
 // This is accomplished by ORing the source and destination, and storing the result in the destination.
-class Bis(src: Operand, dst: Operand) : DoubleOperandInstruction("BIC", src, dst, false, 5)
-class Bisb(src: Operand, dst: Operand) : DoubleOperandInstruction("BIC", src, dst, true, 5)
+class Bis(src: Operand, dst: Operand) : DoubleOperandInstruction("BIS", src, dst, false, 5)
+class Bisb(src: Operand, dst: Operand) : DoubleOperandInstruction("BISB", src, dst, true, 5)
 
 // Adds the source and destination, storing the results in the destination.
 class Add(src: Operand, dst: Operand) : DoubleOperandInstruction("ADD", src, dst, false, 6)

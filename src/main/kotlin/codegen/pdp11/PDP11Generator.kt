@@ -126,8 +126,10 @@ class PDP11Generator(program: Program) : Generator(program) {
         return usage
     }
 
+    val pdpOperations = mutableListOf<LirInstruction>()
+
     override fun generate(operations: List<Operation>): ByteArray {
-        val pdpOperations = mutableListOf<Instruction>()
+        pdpOperations.clear()
         val usage = getRegUsage(operations)
         for (i in 0..operations.size - 1) {
             val regs = usage.getUsedRegs(i)
@@ -187,13 +189,24 @@ class PDP11Generator(program: Program) : Generator(program) {
         return result
     }
 
-    private fun create2OperandInstruction(operation: Operation, destination: Int): DoubleOperandInstruction {
+    private fun create2OperandInstruction(operation: Operation, destination: Int): LirInstruction {
         TODO()
     }
 
-    fun assign(op: Operation.Assignment) {
-
+    fun assign(operation: Operation.Assignment) {
+        pdpOperations.add(LirMov(operation.result.toLirOp(), operation.operand.toLirOp()))
     }
 
 
+}
+
+fun Operand.toLirOp() : LirOperand {
+    return when(this.type) {
+        OperandType.Register -> LirOperand(LirOperandType.register, this.name, 0)
+        OperandType.ImmediateValue -> LirOperand(LirOperandType.immediate, "", this.value ?: 0)
+        OperandType.LocalVariable -> LirOperand(LirOperandType.localVar, this.name, 0)
+        OperandType.GlobalVariable -> LirOperand(LirOperandType.globalVar, this.name, 0)
+        OperandType.Label -> TODO()
+        OperandType.Phi -> TODO()
+    }
 }
