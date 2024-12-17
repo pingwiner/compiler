@@ -11,8 +11,8 @@ enum class LirOperandType {
 
 class LirOperand(
     val type: LirOperandType,
-    name: String,
-    value: Int
+    val name: String,
+    val value: Int
 )
 
 open class LirInstruction

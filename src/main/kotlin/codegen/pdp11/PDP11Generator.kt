@@ -1,9 +1,7 @@
 package org.pingwiner.compiler.codegen.pdp11
 
-import org.pingwiner.compiler.codegen.Generator
+import org.pingwiner.compiler.codegen.*
 import org.pingwiner.compiler.codegen.Operand
-import org.pingwiner.compiler.codegen.OperandType
-import org.pingwiner.compiler.codegen.Operation
 import org.pingwiner.compiler.parser.Program
 
 class PDP11Generator(program: Program) : Generator(program) {
@@ -156,11 +154,11 @@ class PDP11Generator(program: Program) : Generator(program) {
                             if (nextOp.operand.type == OperandType.Register) {
                                 if (nextOp.operand.name == op.result.name) {
                                     if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
-                                        pdpOperations.add(create2OperandInstruction(op, 1))
+                                        create2OperandInstruction(op, 1)
                                         skipNext = true
                                         continue
                                     } else if ((op.operand2.name == nextOp.result.name) && (op.operand2.type == OperandType.LocalVariable)) {
-                                        pdpOperations.add(create2OperandInstruction(op, 2))
+                                        create2OperandInstruction(op, 2)
                                         skipNext = true
                                         continue
                                     }
@@ -189,8 +187,45 @@ class PDP11Generator(program: Program) : Generator(program) {
         return result
     }
 
-    private fun create2OperandInstruction(operation: Operation, destination: Int): LirInstruction {
-        TODO()
+    private fun create2OperandInstruction(operation: Operation.BinaryOperation, destination: Int) {
+        val operand1 = if (destination == 1) operation.operand1.toLirOp() else operation.operand2.toLirOp()
+        val operand2 = if (destination == 1) operation.operand2.toLirOp() else operation.operand1.toLirOp()
+        when(operation.operator) {
+            Operator.PLUS -> { pdpOperations.add( LirAdd(operand1, operand2) ) }
+            Operator.MINUS -> { pdpOperations.add( LirSub(operand1, operand2) ) }
+            Operator.MULTIPLY -> TODO()
+            Operator.DIVIDE -> TODO()
+            Operator.EQ -> TODO()
+            Operator.LT -> TODO()
+            Operator.GT -> TODO()
+            Operator.GTEQ -> TODO()
+            Operator.LTEQ -> TODO()
+            Operator.NEQ -> TODO()
+            Operator.SHR -> {
+                for (i in 0..<operand2.value) {
+                    pdpOperations.add(
+                        LirAsr(operand1)
+                    )
+                }
+            }
+            Operator.SHL -> {
+                for (i in 0..<operand2.value) {
+                    pdpOperations.add(
+                        LirAsl(operand1)
+                    )
+                }
+            }
+            Operator.OR -> { pdpOperations.add( LirBis(operand1, operand2) ) }
+            Operator.AND -> {
+                // load Rx <- operand2
+                // Com Rx
+                pdpOperations.add( LirCom(operand2) )
+                pdpOperations.add( LirBic(operand1, operand2) )
+            }
+            Operator.XOR -> TODO()
+            Operator.MOD -> TODO()
+            Operator.IF -> TODO()
+        }
     }
 
     fun assign(operation: Operation.Assignment) {
