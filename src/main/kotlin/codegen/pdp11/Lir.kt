@@ -17,13 +17,14 @@ class LirOperand(
 
 open class LirInstruction
 
-class LirMov(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
-class LirAdd(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
-class LirSub(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
-class LirCmp(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
-class LirBit(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
-class LirBic(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
-class LirBis(val op1: LirOperand, val op2: LirOperand) : LirInstruction()
+class LirMov(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirAdd(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirSub(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirCmp(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirBit(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirBic(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirBis(val src: LirOperand, val dst: LirOperand) : LirInstruction()
+class LirXor(val src: LirOperand, val dst: LirOperand) : LirInstruction()
 
 class LirSwab(val op: LirOperand): LirInstruction()
 class LirClr(val op: LirOperand): LirInstruction()

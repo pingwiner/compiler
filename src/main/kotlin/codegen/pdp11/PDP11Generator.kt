@@ -154,11 +154,7 @@ class PDP11Generator(program: Program) : Generator(program) {
                             if (nextOp.operand.type == OperandType.Register) {
                                 if (nextOp.operand.name == op.result.name) {
                                     if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
-                                        create2OperandInstruction(op, 1)
-                                        skipNext = true
-                                        continue
-                                    } else if ((op.operand2.name == nextOp.result.name) && (op.operand2.type == OperandType.LocalVariable)) {
-                                        create2OperandInstruction(op, 2)
+                                        create2OperandInstruction(op)
                                         skipNext = true
                                         continue
                                     }
@@ -187,44 +183,43 @@ class PDP11Generator(program: Program) : Generator(program) {
         return result
     }
 
-    private fun create2OperandInstruction(operation: Operation.BinaryOperation, destination: Int) {
-        val operand1 = if (destination == 1) operation.operand1.toLirOp() else operation.operand2.toLirOp()
-        val operand2 = if (destination == 1) operation.operand2.toLirOp() else operation.operand1.toLirOp()
+    private fun addOperationXTimes(instr: LirInstruction, times: Int) {
+        for (i in 0..<times) {
+            pdpOperations.add(instr)
+        }
+    }
+
+    private fun create2OperandInstruction(operation: Operation.BinaryOperation) {
+        val dst = operation.operand1.toLirOp()
+        val src = operation.operand2.toLirOp()
         when(operation.operator) {
-            Operator.PLUS -> { pdpOperations.add( LirAdd(operand1, operand2) ) }
-            Operator.MINUS -> { pdpOperations.add( LirSub(operand1, operand2) ) }
+            Operator.PLUS -> { pdpOperations.add( LirAdd(src, dst) ) }
+            Operator.MINUS -> { pdpOperations.add( LirSub(src, dst) ) }
             Operator.MULTIPLY -> TODO()
             Operator.DIVIDE -> TODO()
-            Operator.EQ -> TODO()
-            Operator.LT -> TODO()
-            Operator.GT -> TODO()
-            Operator.GTEQ -> TODO()
-            Operator.LTEQ -> TODO()
-            Operator.NEQ -> TODO()
             Operator.SHR -> {
-                for (i in 0..<operand2.value) {
+                for (i in 0..<src.value) {
                     pdpOperations.add(
-                        LirAsr(operand1)
+                        LirAsr(dst)
                     )
                 }
             }
             Operator.SHL -> {
-                for (i in 0..<operand2.value) {
+                for (i in 0..<src.value) {
                     pdpOperations.add(
-                        LirAsl(operand1)
+                        LirAsl(dst)
                     )
                 }
             }
-            Operator.OR -> { pdpOperations.add( LirBis(operand1, operand2) ) }
+            Operator.OR -> { pdpOperations.add( LirBis(src, dst) ) }
             Operator.AND -> {
-                // load Rx <- operand2
-                // Com Rx
-                pdpOperations.add( LirCom(operand2) )
-                pdpOperations.add( LirBic(operand1, operand2) )
+                pdpOperations.add( LirCom(src) )
+                pdpOperations.add( LirBic(src, dst) )
+                pdpOperations.add( LirCom(src) )
             }
             Operator.XOR -> TODO()
             Operator.MOD -> TODO()
-            Operator.IF -> TODO()
+            else -> {}
         }
     }
 
