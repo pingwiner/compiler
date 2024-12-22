@@ -4,9 +4,9 @@ var vvv = 1;
 
 fun main(arg1, arg2) {
     a = 1;
+    b = 2;
     a = a + arg1;
-    b = arg2 + 2;
-    a = a + vvv;
-    vvv = a;
-    return  a + b;
+    b = a * b;
+    b = 2 - b;
+    return b;
 }

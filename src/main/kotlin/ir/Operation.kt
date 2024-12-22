@@ -64,6 +64,28 @@ enum class Operator(val op: String) {
     MOD("%"),
     IF("?");
 
+    fun isCommutative(): Boolean {
+        return when(this) {
+            PLUS -> true
+            MINUS -> false
+            MULTIPLY -> true
+            DIVIDE -> false
+            EQ -> true
+            LT -> false
+            GT -> false
+            GTEQ -> false
+            LTEQ -> false
+            NEQ -> true
+            SHR -> false
+            SHL -> false
+            OR -> true
+            AND -> true
+            XOR -> true
+            MOD -> false
+            IF -> false
+        }
+    }
+
     companion object {
         fun from(node: ASTNode.BinaryOperation): Operator {
             return when(node) {

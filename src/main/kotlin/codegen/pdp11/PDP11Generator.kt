@@ -124,6 +124,78 @@ class PDP11Generator(program: Program) : Generator(program) {
         return usage
     }
 
+    fun squashSsaAssignments(operations: List<Operation>): List<Operation> {
+        var regValMap = mutableMapOf<String, String>()
+        var i = 0
+        var skipNextOp = false
+        val result = mutableListOf<Operation>()
+        for (op in operations) {
+            if (skipNextOp) {
+                i++
+                skipNextOp = false
+                continue
+            }
+            if (op != operations.last()) {
+                if (op is Operation.BinaryOperation) {
+                    if (op.result.type == OperandType.Register) {
+                        val nextOp = operations[i + 1]
+                        if (nextOp is Operation.Assignment) {
+                            if (nextOp.operand.type == OperandType.Register) {
+                                if (nextOp.operand.name == op.result.name) {
+                                    if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
+                                        regValMap[op.result.name] = op.operand1.name
+                                        val newOp = Operation.BinaryOperation(op.operand1, op.operand1, op.operand2, op.operator)
+                                        result.add(checkOperand2(newOp, regValMap))
+                                        i++
+                                        skipNextOp = true
+                                        continue
+                                    } else if ((op.operand2.name == nextOp.result.name) && (op.operand2.type == OperandType.LocalVariable)) {
+                                        if (op.operator.isCommutative()) {
+                                            regValMap[op.result.name] = op.operand2.name
+                                            val newOp = Operation.BinaryOperation(op.operand2, op.operand2, op.operand1, op.operator)
+                                            result.add(checkOperand2(newOp, regValMap))
+                                            i++
+                                            skipNextOp = true
+                                            continue
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    val newOp1 = checkOperand1(op, regValMap)
+                    val newOp2 = checkOperand2(newOp1, regValMap)
+                    result.add(newOp2)
+                    i++
+                    continue
+                }
+            }
+            result.add(op)
+            i++
+        }
+        return result
+    }
+
+    fun checkOperand1(op: Operation.BinaryOperation, regMap: Map<String, String>): Operation.BinaryOperation {
+        if (op.operand1.type == OperandType.Register) {
+            if (regMap.containsKey(op.operand1.name)) {
+                val varName = regMap[op.operand1.name]
+                return Operation.BinaryOperation(op.result, Operand(varName!!, OperandType.LocalVariable, 0), op.operand2, op.operator)
+            }
+        }
+        return op
+    }
+
+    fun checkOperand2(op: Operation.BinaryOperation, regMap: Map<String, String>): Operation.BinaryOperation {
+        if (op.operand2.type == OperandType.Register) {
+            if (regMap.containsKey(op.operand2.name)) {
+                val varName = regMap[op.operand2.name]
+                return Operation.BinaryOperation(op.result, op.operand1, Operand(varName!!, OperandType.LocalVariable, 0), op.operator)
+            }
+        }
+        return op
+    }
+
     val pdpOperations = mutableListOf<LirInstruction>()
 
     override fun generate(operations: List<Operation>): ByteArray {

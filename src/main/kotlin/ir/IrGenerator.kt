@@ -51,9 +51,11 @@ class IrGenerator(val program: Program) {
                 usedLocalVars,
                 operations
             )
-            printOperations()
+            printOperations(operations)
             val gen = PDP11Generator(program)
-            gen.generate(operations)
+            val newOperations = gen.squashSsaAssignments(operations)
+            println("-- squash --")
+            printOperations(newOperations)
         }
     }
 
@@ -471,8 +473,8 @@ class IrGenerator(val program: Program) {
 
     private fun boolToInt(b: Boolean) = if (b) 1 else 0
 
-    fun printOperations() {
-        for (op in operations) {
+    fun printOperations(ops: List<Operation>) {
+        for (op in ops) {
             println(op.toString())
         }
         println()
