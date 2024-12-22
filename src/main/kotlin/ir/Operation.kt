@@ -64,6 +64,28 @@ enum class Operator(val op: String) {
     MOD("%"),
     IF("?");
 
+    fun isCondition(): Boolean {
+        return when(this) {
+            PLUS -> false
+            MINUS -> false
+            MULTIPLY -> false
+            DIVIDE -> false
+            EQ -> true
+            LT -> true
+            GT -> true
+            GTEQ -> true
+            LTEQ -> true
+            NEQ -> true
+            SHR -> false
+            SHL -> false
+            OR -> false
+            AND -> false
+            XOR -> false
+            MOD -> false
+            IF -> false
+        }
+    }
+
     fun isCommutative(): Boolean {
         return when(this) {
             PLUS -> true

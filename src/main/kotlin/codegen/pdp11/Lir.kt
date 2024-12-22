@@ -1,7 +1,5 @@
 package org.pingwiner.compiler.codegen.pdp11
 
-import org.pingwiner.compiler.codegen.Operand
-
 enum class LirOperandType {
     immediate,
     localVar,
@@ -40,19 +38,19 @@ class LirRol(val op: LirOperand): LirInstruction()
 class LirAsr(val op: LirOperand): LirInstruction()
 class LirAsl(val op: LirOperand): LirInstruction()
 
-class LirJmp(offset: Int): LirInstruction()
-class LirJe(offset: Int): LirInstruction()
-class LirJne(offset: Int): LirInstruction()
-class LirJgt(offset: Int): LirInstruction()
-class LirJlt(offset: Int): LirInstruction()
-class LirJge(offset: Int): LirInstruction()
-class LirJle(offset: Int): LirInstruction()
-class LirJpl(offset: Int): LirInstruction()
-class LirJmi(offset: Int): LirInstruction()
+class LirJmp(offset: Int, label: String): LirInstruction()
+class LirJe(offset: Int, label: String): LirInstruction()
+class LirJne(offset: Int, label: String): LirInstruction()
+class LirJgt(offset: Int, label: String): LirInstruction()
+class LirJlt(offset: Int, label: String): LirInstruction()
+class LirJge(offset: Int, label: String): LirInstruction()
+class LirJle(offset: Int, label: String): LirInstruction()
+class LirJpl(offset: Int, label: String): LirInstruction()
+class LirJmi(offset: Int, label: String): LirInstruction()
 
 class LirJmpAbs(op: Operand): LirInstruction()
 
-class LirCall(op: Operand): LirInstruction()
+class LirCall(op: Operand, label: String): LirInstruction()
 class LirRet(): LirInstruction()
 class LirPush(op: Operand): LirInstruction()
 class LirPop(op: Operand): LirInstruction()

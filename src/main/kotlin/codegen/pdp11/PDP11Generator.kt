@@ -161,6 +161,8 @@ class PDP11Generator(program: Program) : Generator(program) {
                                     }
                                 }
                             }
+                        } else if (nextOp is Operation.IfNot) {
+
                         }
                     }
                     val newOp1 = checkOperand1(op, regValMap)
@@ -169,6 +171,14 @@ class PDP11Generator(program: Program) : Generator(program) {
                     i++
                     continue
                 }
+                if (op is Operation.Assignment) {
+                    if ((op.operand.type == OperandType.Register) && (op.result.type == OperandType.LocalVariable)) {
+                        if (!checkIfVarUsed(op.result.name,  operations.subList(i + 1, operations.size))) {
+                            i++
+                            continue
+                        }
+                    }
+                }
             }
             result.add(op)
             i++
@@ -176,7 +186,47 @@ class PDP11Generator(program: Program) : Generator(program) {
         return result
     }
 
-    fun checkOperand1(op: Operation.BinaryOperation, regMap: Map<String, String>): Operation.BinaryOperation {
+    private fun checkIfVarUsed(varName: String, ops: List<Operation>): Boolean {
+        for (op in ops) {
+            when (op) {
+                is Operation.Return -> {
+                    if (op.result.name == varName) return true
+                }
+                is Operation.Assignment -> {
+                    if (op.operand.name == varName) return true
+                }
+                is Operation.BinaryOperation -> {
+                    if ((op.operand1.name == varName) || (op.operand2.name == varName)) return true
+                }
+                is Operation.Call -> {
+                    if (op.args.any { it.name == varName }) return true
+                }
+                is Operation.Goto -> {}
+                is Operation.IfNot -> {
+                    if (op.condition.name == varName) return true
+                }
+                is Operation.Inv -> {
+                    if (op.operand.name == varName) return true
+                }
+                is Operation.Label -> {}
+                is Operation.Load -> {
+                    if (op.index.name == varName) return true
+                }
+                is Operation.Neg -> {
+                    if (op.operand.name == varName) return true
+                }
+                is Operation.SetResult -> {
+                    if (op.result.name == varName) return true
+                }
+                is Operation.Store -> {
+                    if (op.index.name == varName) return true
+                }
+            }
+        }
+        return false
+    }
+
+    private fun checkOperand1(op: Operation.BinaryOperation, regMap: Map<String, String>): Operation.BinaryOperation {
         if (op.operand1.type == OperandType.Register) {
             if (regMap.containsKey(op.operand1.name)) {
                 val varName = regMap[op.operand1.name]
@@ -186,7 +236,7 @@ class PDP11Generator(program: Program) : Generator(program) {
         return op
     }
 
-    fun checkOperand2(op: Operation.BinaryOperation, regMap: Map<String, String>): Operation.BinaryOperation {
+    private fun checkOperand2(op: Operation.BinaryOperation, regMap: Map<String, String>): Operation.BinaryOperation {
         if (op.operand2.type == OperandType.Register) {
             if (regMap.containsKey(op.operand2.name)) {
                 val varName = regMap[op.operand2.name]
@@ -198,10 +248,9 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     val pdpOperations = mutableListOf<LirInstruction>()
 
-    override fun generate(operations: List<Operation>): ByteArray {
-        pdpOperations.clear()
+    fun printRegUsage(operations: List<Operation>) {
         val usage = getRegUsage(operations)
-        for (i in 0..operations.size - 1) {
+        for (i in operations.indices) {
             val regs = usage.getUsedRegs(i)
             val sb = StringBuilder()
             for (r in regs) {
@@ -210,8 +259,11 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
             println(sb.toString())
         }
+    }
 
-        val result = byteArrayOf()
+    override fun generate(operations: List<Operation>): ByteArray {
+        pdpOperations.clear()
+
         var skipNext = false
         for ((i, op) in operations.withIndex()) {
             if (skipNext) {
@@ -220,16 +272,15 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
             if (op != operations.last()) {
                 if (op is Operation.BinaryOperation) {
-                    if (op.result.type == OperandType.Register) {
+                    if ((op.result.type == OperandType.Register) && (op.operator.isCondition())) {
                         val nextOp = operations[i + 1]
-                        if (nextOp is Operation.Assignment) {
-                            if (nextOp.operand.type == OperandType.Register) {
-                                if (nextOp.operand.name == op.result.name) {
-                                    if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
-                                        create2OperandInstruction(op)
-                                        skipNext = true
-                                        continue
-                                    }
+                        if (nextOp is Operation.IfNot) {
+                            if (nextOp.condition.type == OperandType.Register) {
+                                if (nextOp.condition.name == op.result.name) {
+                                    pdpOperations.add(LirCmp(op.operand1.toLirOp(), op.operand2.toLirOp()))
+                                    pdpOperations.add(jmpIfNot(op.operator, nextOp.result))
+                                    skipNext = true
+                                    continue
                                 }
                             }
                         }
@@ -240,7 +291,9 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Assignment -> assign(op)
                 is Operation.BinaryOperation -> TODO()
                 is Operation.Call -> TODO()
-                is Operation.Goto -> TODO()
+                is Operation.Goto -> {
+                    pdpOperations.add(LirJmp(0, op.result.name))
+                }
                 is Operation.IfNot -> TODO()
                 is Operation.Inv -> TODO()
                 is Operation.Label -> TODO()
@@ -251,8 +304,24 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Store -> TODO()
             }
         }
+        return ByteArray(0)
+    }
 
-        return result
+    private fun jmpIfNot(operator: Operator, label: Operand): LirInstruction {
+        if (label.type != OperandType.Label) {
+            throw IllegalArgumentException("Label expected")
+        }
+        return when (operator) {
+            Operator.EQ -> LirJne(0, label.name)
+            Operator.NEQ -> LirJe(0, label.name)
+            Operator.LT -> LirJge(0, label.name)
+            Operator.GT -> LirJle(0, label.name)
+            Operator.GTEQ -> LirJlt(0, label.name)
+            Operator.LTEQ -> LirJgt(0, label.name)
+            else -> {
+                throw IllegalArgumentException("Condition expected")
+            }
+        }
     }
 
     private fun addOperationXTimes(instr: LirInstruction, times: Int) {
@@ -296,7 +365,7 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     fun assign(operation: Operation.Assignment) {
-        pdpOperations.add(LirMov(operation.result.toLirOp(), operation.operand.toLirOp()))
+        pdpOperations.add(LirMov(operation.operand.toLirOp(), operation.result.toLirOp()))
     }
 
 
