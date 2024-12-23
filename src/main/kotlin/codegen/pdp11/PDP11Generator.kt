@@ -137,32 +137,42 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
             if (op != operations.last()) {
                 if (op is Operation.BinaryOperation) {
-                    if (op.result.type == OperandType.Register) {
-                        val nextOp = operations[i + 1]
-                        if (nextOp is Operation.Assignment) {
-                            if (nextOp.operand.type == OperandType.Register) {
-                                if (nextOp.operand.name == op.result.name) {
-                                    if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
-                                        regValMap[op.result.name] = op.operand1.name
-                                        val newOp = Operation.BinaryOperation(op.operand1, op.operand1, op.operand2, op.operator)
-                                        result.add(checkOperand2(newOp, regValMap))
-                                        i++
-                                        skipNextOp = true
-                                        continue
-                                    } else if ((op.operand2.name == nextOp.result.name) && (op.operand2.type == OperandType.LocalVariable)) {
-                                        if (op.operator.isCommutative()) {
-                                            regValMap[op.result.name] = op.operand2.name
-                                            val newOp = Operation.BinaryOperation(op.operand2, op.operand2, op.operand1, op.operator)
+                    if (!op.operator.isCondition()) {
+                        if (op.result.type == OperandType.Register) {
+                            val nextOp = operations[i + 1]
+                            if (nextOp is Operation.Assignment) {
+                                if (nextOp.operand.type == OperandType.Register) {
+                                    if (nextOp.operand.name == op.result.name) {
+                                        if ((op.operand1.name == nextOp.result.name) && (op.operand1.type == OperandType.LocalVariable)) {
+                                            regValMap[op.result.name] = op.operand1.name
+                                            val newOp = Operation.BinaryOperation(
+                                                op.operand1,
+                                                op.operand1,
+                                                op.operand2,
+                                                op.operator
+                                            )
                                             result.add(checkOperand2(newOp, regValMap))
                                             i++
                                             skipNextOp = true
                                             continue
+                                        } else if ((op.operand2.name == nextOp.result.name) && (op.operand2.type == OperandType.LocalVariable)) {
+                                            if (op.operator.isCommutative()) {
+                                                regValMap[op.result.name] = op.operand2.name
+                                                val newOp = Operation.BinaryOperation(
+                                                    op.operand2,
+                                                    op.operand2,
+                                                    op.operand1,
+                                                    op.operator
+                                                )
+                                                result.add(checkOperand2(newOp, regValMap))
+                                                i++
+                                                skipNextOp = true
+                                                continue
+                                            }
                                         }
                                     }
                                 }
                             }
-                        } else if (nextOp is Operation.IfNot) {
-
                         }
                     }
                     val newOp1 = checkOperand1(op, regValMap)
@@ -246,7 +256,7 @@ class PDP11Generator(program: Program) : Generator(program) {
         return op
     }
 
-    val pdpOperations = mutableListOf<LirInstruction>()
+    val lirOperations = mutableListOf<LirInstruction>()
 
     fun printRegUsage(operations: List<Operation>) {
         val usage = getRegUsage(operations)
@@ -262,7 +272,7 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     override fun generate(operations: List<Operation>): ByteArray {
-        pdpOperations.clear()
+        lirOperations.clear()
 
         var skipNext = false
         for ((i, op) in operations.withIndex()) {
@@ -277,8 +287,8 @@ class PDP11Generator(program: Program) : Generator(program) {
                         if (nextOp is Operation.IfNot) {
                             if (nextOp.condition.type == OperandType.Register) {
                                 if (nextOp.condition.name == op.result.name) {
-                                    pdpOperations.add(LirCmp(op.operand1.toLirOp(), op.operand2.toLirOp()))
-                                    pdpOperations.add(jmpIfNot(op.operator, nextOp.result))
+                                    lirOperations.add(LirCmp(op.operand1.toLirOp(), op.operand2.toLirOp()))
+                                    lirOperations.add(jmpIfNot(op.operator, nextOp.result))
                                     skipNext = true
                                     continue
                                 }
@@ -288,23 +298,37 @@ class PDP11Generator(program: Program) : Generator(program) {
                 }
             }
             when (op) {
-                is Operation.Assignment -> assign(op)
-                is Operation.BinaryOperation -> TODO()
-                is Operation.Call -> TODO()
+                is Operation.Assignment -> {
+                    lirOperations.add(LirMov(op.operand.toLirOp(), op.result.toLirOp()))
+                }
+                is Operation.BinaryOperation -> create2OperandInstruction(op)
+                is Operation.Call -> makeCall(op)
                 is Operation.Goto -> {
-                    pdpOperations.add(LirJmp(0, op.result.name))
+                    lirOperations.add(LirJmp(op.result.name))
                 }
                 is Operation.IfNot -> TODO()
-                is Operation.Inv -> TODO()
+                is Operation.Inv -> {
+                    lirOperations.add(LirCom(op.operand.toLirOp()))
+                }
                 is Operation.Label -> TODO()
                 is Operation.Load -> TODO()
-                is Operation.Neg -> TODO()
-                is Operation.Return -> TODO()
-                is Operation.SetResult -> TODO()
+                is Operation.Neg -> {
+                    lirOperations.add(LirNeg(op.operand.toLirOp()))
+                }
+                is Operation.Return -> {
+                    lirOperations.add(LirRet())
+                }
+                is Operation.SetResult -> {
+                    lirOperations.add(LirMov(op.result.toLirOp(), LirOperand(LirOperandType.register, "R0", 0)))
+                }
                 is Operation.Store -> TODO()
             }
         }
         return ByteArray(0)
+    }
+
+    private fun makeCall(op: Operation.Call) {
+
     }
 
     private fun jmpIfNot(operator: Operator, label: Operand): LirInstruction {
@@ -312,12 +336,12 @@ class PDP11Generator(program: Program) : Generator(program) {
             throw IllegalArgumentException("Label expected")
         }
         return when (operator) {
-            Operator.EQ -> LirJne(0, label.name)
-            Operator.NEQ -> LirJe(0, label.name)
-            Operator.LT -> LirJge(0, label.name)
-            Operator.GT -> LirJle(0, label.name)
-            Operator.GTEQ -> LirJlt(0, label.name)
-            Operator.LTEQ -> LirJgt(0, label.name)
+            Operator.EQ -> LirJne(label.name)
+            Operator.NEQ -> LirJe(label.name)
+            Operator.LT -> LirJge(label.name)
+            Operator.GT -> LirJle(label.name)
+            Operator.GTEQ -> LirJlt(label.name)
+            Operator.LTEQ -> LirJgt(label.name)
             else -> {
                 throw IllegalArgumentException("Condition expected")
             }
@@ -326,37 +350,79 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     private fun addOperationXTimes(instr: LirInstruction, times: Int) {
         for (i in 0..<times) {
-            pdpOperations.add(instr)
+            lirOperations.add(instr)
         }
     }
 
     private fun create2OperandInstruction(operation: Operation.BinaryOperation) {
-        val dst = operation.operand1.toLirOp()
-        val src = operation.operand2.toLirOp()
+        if ((operation.operand1.name == operation.result.name) && (operation.operand1.type == OperandType.LocalVariable)) {
+            makeInPlaceBinaryOperation(operation)
+        } else {
+            val src = operation.operand1.toLirOp()
+            val dst = operation.operand2.toLirOp()
+            when (operation.operator) {
+                Operator.PLUS -> {
+                    lirOperations.add(LirAdd(src, dst))
+                }
+
+                Operator.MINUS -> {
+                    lirOperations.add(LirSub(src, dst))
+                }
+
+                Operator.MULTIPLY -> TODO()
+                Operator.DIVIDE -> TODO()
+                Operator.SHR -> {
+                    for (i in 0..<src.value) {
+                        lirOperations.add(
+                            LirAsr(dst)
+                        )
+                    }
+                }
+
+                Operator.SHL -> {
+                    for (i in 0..<src.value) {
+                        lirOperations.add(
+                            LirAsl(dst)
+                        )
+                    }
+                }
+
+                Operator.OR -> {
+                    lirOperations.add(LirBis(src, dst))
+                }
+
+                Operator.AND -> {
+                    lirOperations.add(LirCom(src))
+                    lirOperations.add(LirBic(src, dst))
+                    lirOperations.add(LirCom(src))
+                }
+
+                Operator.XOR -> TODO()
+                Operator.MOD -> TODO()
+                else -> {}
+            }
+        }
+    }
+
+    private fun makeInPlaceBinaryOperation(operation: Operation.BinaryOperation) {
         when(operation.operator) {
-            Operator.PLUS -> { pdpOperations.add( LirAdd(src, dst) ) }
-            Operator.MINUS -> { pdpOperations.add( LirSub(src, dst) ) }
+            Operator.PLUS -> {
+                lirOperations.add(LirAdd(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+            }
+            Operator.MINUS -> {
+                lirOperations.add(LirSub(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+            }
             Operator.MULTIPLY -> TODO()
             Operator.DIVIDE -> TODO()
-            Operator.SHR -> {
-                for (i in 0..<src.value) {
-                    pdpOperations.add(
-                        LirAsr(dst)
-                    )
-                }
+            Operator.SHR -> makeShift(operation)
+            Operator.SHL -> makeShift(operation)
+            Operator.OR -> {
+                lirOperations.add(LirBis(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
             }
-            Operator.SHL -> {
-                for (i in 0..<src.value) {
-                    pdpOperations.add(
-                        LirAsl(dst)
-                    )
-                }
-            }
-            Operator.OR -> { pdpOperations.add( LirBis(src, dst) ) }
             Operator.AND -> {
-                pdpOperations.add( LirCom(src) )
-                pdpOperations.add( LirBic(src, dst) )
-                pdpOperations.add( LirCom(src) )
+                lirOperations.add(LirCom(operation.operand2.toLirOp()))
+                lirOperations.add(LirBic(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+                lirOperations.add(LirCom(operation.operand2.toLirOp()))
             }
             Operator.XOR -> TODO()
             Operator.MOD -> TODO()
@@ -364,12 +430,25 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
     }
 
-    fun assign(operation: Operation.Assignment) {
-        pdpOperations.add(LirMov(operation.operand.toLirOp(), operation.result.toLirOp()))
+    private fun makeShift(operation: Operation.BinaryOperation) {
+        if (operation.operand2.type == OperandType.ImmediateValue) {
+            val shift = operation.operand2.value ?: 0
+            if (shift > 0) {
+                addOperationXTimes(
+                    if (operation.operator == Operator.SHR)
+                        LirAsr(operation.operand1.toLirOp())
+                    else
+                        LirAsl(operation.operand1.toLirOp()),
+                    shift
+                )
+            }
+        } else {
+            TODO()
+        }
     }
 
-
 }
+
 
 fun Operand.toLirOp() : LirOperand {
     return when(this.type) {
