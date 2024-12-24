@@ -53,9 +53,8 @@ class IrGenerator(val program: Program) {
             )
             printOperations(operations)
             val gen = PDP11Generator(program)
-            val newOperations = gen.squashSsaAssignments(operations)
-            println("-- squash --")
-            printOperations(newOperations)
+            gen.generate(operations)
+
         }
     }
 

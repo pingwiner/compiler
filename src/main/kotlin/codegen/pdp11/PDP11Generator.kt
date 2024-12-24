@@ -272,6 +272,8 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     override fun generate(operations: List<Operation>): ByteArray {
+        val squashedOps = squashSsaAssignments(operations)
+
         lirOperations.clear()
 
         var skipNext = false
@@ -358,43 +360,37 @@ class PDP11Generator(program: Program) : Generator(program) {
         if ((operation.operand1.name == operation.result.name) && (operation.operand1.type == OperandType.LocalVariable)) {
             makeInPlaceBinaryOperation(operation)
         } else {
-            val src = operation.operand1.toLirOp()
-            val dst = operation.operand2.toLirOp()
+            val dst = operation.result.toLirOp()
             when (operation.operator) {
                 Operator.PLUS -> {
-                    lirOperations.add(LirAdd(src, dst))
+                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirAdd(operation.operand2.toLirOp(), dst))
                 }
 
                 Operator.MINUS -> {
-                    lirOperations.add(LirSub(src, dst))
+                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirSub(operation.operand2.toLirOp(), dst))
                 }
 
                 Operator.MULTIPLY -> TODO()
                 Operator.DIVIDE -> TODO()
-                Operator.SHR -> {
-                    for (i in 0..<src.value) {
-                        lirOperations.add(
-                            LirAsr(dst)
-                        )
-                    }
-                }
-
+                Operator.SHR,
                 Operator.SHL -> {
-                    for (i in 0..<src.value) {
-                        lirOperations.add(
-                            LirAsl(dst)
-                        )
-                    }
+                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    makeShift(Operation.BinaryOperation(operation.result, operation.result, operation.operand2, operation.operator))
                 }
 
                 Operator.OR -> {
-                    lirOperations.add(LirBis(src, dst))
+                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirBis(operation.operand2.toLirOp(), dst))
                 }
 
                 Operator.AND -> {
-                    lirOperations.add(LirCom(src))
-                    lirOperations.add(LirBic(src, dst))
-                    lirOperations.add(LirCom(src))
+                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    val op2 = operation.operand2.toLirOp()
+                    lirOperations.add(LirCom(op2))
+                    lirOperations.add(LirBic(op2, dst))
+                    lirOperations.add(LirCom(op2))
                 }
 
                 Operator.XOR -> TODO()
