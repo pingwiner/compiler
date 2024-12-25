@@ -337,7 +337,13 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     private fun makeCall(op: Operation.Call) {
-
+        lirOperations.add(LirPushRegs())
+        for (arg in op.args) {
+            lirOperations.add(LirPush(arg.toLirOp()))
+        }
+        lirOperations.add(LirCall(op.label.name))
+        lirOperations.add(LirAlign(op.args.size))
+        lirOperations.add(LirPopRegs())
     }
 
     private fun jmpIfNot(operator: Operator, label: Operand): LirInstruction {
