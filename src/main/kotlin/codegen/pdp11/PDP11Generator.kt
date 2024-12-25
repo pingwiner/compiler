@@ -7,6 +7,13 @@ import org.pingwiner.compiler.parser.Program
 class PDP11Generator(program: Program) : Generator(program) {
     private val globalVarsAllocMap = mutableMapOf<String, Int>()
     private val baseAddr = 0x3000
+    private var nextRegNumber = 0
+
+    private fun allocReg(): LirOperand {
+        nextRegNumber++
+        val regName = "LR{nextRegNumber}"
+        return LirOperand(LirOperandType.register, regName, 0)
+    }
 
     private fun allocVars() {
         var addr =baseAddr
@@ -137,7 +144,7 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
             if (op != operations.last()) {
                 if (op is Operation.BinaryOperation) {
-                    if (!op.operator.isCondition()) {
+                    if (!op.operator.isCondition() && (op.operator != Operator.XOR)) {
                         if (op.result.type == OperandType.Register) {
                             val nextOp = operations[i + 1]
                             if (nextOp is Operation.Assignment) {
@@ -271,8 +278,8 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
     }
 
-    override fun generate(operations: List<Operation>): ByteArray {
-        val squashedOps = squashSsaAssignments(operations)
+    override fun generate(irOperations: List<Operation>): ByteArray {
+        val operations = squashSsaAssignments(irOperations)
 
         lirOperations.clear()
 
@@ -393,7 +400,12 @@ class PDP11Generator(program: Program) : Generator(program) {
                     lirOperations.add(LirCom(op2))
                 }
 
-                Operator.XOR -> TODO()
+                Operator.XOR -> {
+                    val tempReg = allocReg()
+                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirMov(tempReg, operation.operand2.toLirOp()))
+                    lirOperations.add(LirXor(tempReg, dst))
+                }
                 Operator.MOD -> TODO()
                 else -> {}
             }
@@ -420,7 +432,9 @@ class PDP11Generator(program: Program) : Generator(program) {
                 lirOperations.add(LirBic(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
                 lirOperations.add(LirCom(operation.operand2.toLirOp()))
             }
-            Operator.XOR -> TODO()
+            Operator.XOR -> { // should never happen
+                throw IllegalStateException("Xor should not be inplace operation")
+            }
             Operator.MOD -> TODO()
             else -> {}
         }
