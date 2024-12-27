@@ -8,10 +8,13 @@ class PDP11Generator(program: Program) : Generator(program) {
     private val globalVarsAllocMap = mutableMapOf<String, Int>()
     private val baseAddr = 0x3000
     private var nextRegNumber = 0
+    companion object {
+        const val SIZE_OF_INT = 2
+    }
 
     private fun allocReg(): LirOperand {
         nextRegNumber++
-        val regName = "LR{nextRegNumber}"
+        val regName = "LR$nextRegNumber"
         return LirOperand(LirOperandType.register, regName, 0)
     }
 
@@ -331,7 +334,13 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Label -> {
                     lirOperations.add(LirLabel(op.result.name))
                 }
-                is Operation.Load -> TODO()
+                is Operation.Load -> {
+                    val r = op.result.toLirOp()
+                    lirOperations.add(LirMov(op.index.toLirOp(), r))
+                    lirOperations.add(LirAsl(r))
+                    lirOperations.add(LirAdd(op.base.toLirOp(), r))
+                    lirOperations.add(LirMov(r.copy(type = LirOperandType.indirect), op.result.toLirOp()))
+                }
                 is Operation.Neg -> {
                     lirOperations.add(LirNeg(op.operand.toLirOp()))
                 }
@@ -342,7 +351,13 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.SetResult -> {
                     lirOperations.add(LirMov(op.result.toLirOp(), LirOperand(LirOperandType.register, "R0", 0)))
                 }
-                is Operation.Store -> TODO()
+                is Operation.Store -> {
+                    val r = allocReg()
+                    lirOperations.add(LirMov(op.index.toLirOp(), r))
+                    lirOperations.add(LirAsl(r))
+                    lirOperations.add(LirAdd(op.base.toLirOp(), r))
+                    lirOperations.add(LirMov(op.result.toLirOp(), r.copy(type = LirOperandType.indirect)))
+                }
             }
         }
         printLirOperations()

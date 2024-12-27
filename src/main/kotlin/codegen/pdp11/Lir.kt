@@ -4,10 +4,11 @@ enum class LirOperandType {
     immediate,
     localVar,
     globalVar,
-    register
+    register,
+    indirect
 }
 
-class LirOperand(
+data class LirOperand(
     val type: LirOperandType,
     val name: String,
     val value: Int
@@ -15,6 +16,7 @@ class LirOperand(
     override fun toString(): String {
         return when(type) {
             LirOperandType.immediate -> "$value"
+            LirOperandType.indirect -> "[$name]"
             else -> name
         }
     }

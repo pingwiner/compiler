@@ -1,6 +1,6 @@
 #comment
 
-var vvv = 1;
+var arr = {1, 2, 3};
 
 fun main(arg1, arg2) {
     a = 1;
@@ -9,7 +9,8 @@ fun main(arg1, arg2) {
     b = a + b;
     b = 2 - b;
     (b == 0) ? {
-        b = b + 1;
+        b = b + arr[2];
     } : (b = 3);
+    arr[1] = b;
     return b;
 }
