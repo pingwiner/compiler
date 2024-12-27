@@ -6,7 +6,7 @@ fun main(arg1, arg2) {
     a = 1;
     b = 2;
     a = a + arg1;
-    b = a * b;
+    b = a + b;
     b = 2 - b;
     (b == 0) ? {
         b = b + 1;

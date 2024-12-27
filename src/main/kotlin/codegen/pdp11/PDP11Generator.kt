@@ -278,6 +278,12 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
     }
 
+    fun printLirOperations() {
+        for (op in lirOperations) {
+            println(op.toString())
+        }
+    }
+
     override fun generate(irOperations: List<Operation>): ByteArray {
         val operations = squashSsaAssignments(irOperations)
 
@@ -315,16 +321,22 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Goto -> {
                     lirOperations.add(LirJmp(op.result.name))
                 }
-                is Operation.IfNot -> TODO()
+                is Operation.IfNot -> {
+                    lirOperations.add(LirCmp(op.condition.toLirOp(), Operand("", OperandType.ImmediateValue, 0).toLirOp()))
+                    lirOperations.add(LirJe(op.result.name))
+                }
                 is Operation.Inv -> {
                     lirOperations.add(LirCom(op.operand.toLirOp()))
                 }
-                is Operation.Label -> TODO()
+                is Operation.Label -> {
+                    lirOperations.add(LirLabel(op.result.name))
+                }
                 is Operation.Load -> TODO()
                 is Operation.Neg -> {
                     lirOperations.add(LirNeg(op.operand.toLirOp()))
                 }
                 is Operation.Return -> {
+                    lirOperations.add(LirMov(op.result.toLirOp(), Operand("R0", OperandType.Register, 0).toLirOp()))
                     lirOperations.add(LirRet())
                 }
                 is Operation.SetResult -> {
@@ -333,6 +345,7 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Store -> TODO()
             }
         }
+        printLirOperations()
         return ByteArray(0)
     }
 
@@ -376,12 +389,12 @@ class PDP11Generator(program: Program) : Generator(program) {
             val dst = operation.result.toLirOp()
             when (operation.operator) {
                 Operator.PLUS -> {
-                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
                     lirOperations.add(LirAdd(operation.operand2.toLirOp(), dst))
                 }
 
                 Operator.MINUS -> {
-                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
                     lirOperations.add(LirSub(operation.operand2.toLirOp(), dst))
                 }
 
@@ -389,17 +402,17 @@ class PDP11Generator(program: Program) : Generator(program) {
                 Operator.DIVIDE -> TODO()
                 Operator.SHR,
                 Operator.SHL -> {
-                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
                     makeShift(Operation.BinaryOperation(operation.result, operation.result, operation.operand2, operation.operator))
                 }
 
                 Operator.OR -> {
-                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
                     lirOperations.add(LirBis(operation.operand2.toLirOp(), dst))
                 }
 
                 Operator.AND -> {
-                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
+                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
                     val op2 = operation.operand2.toLirOp()
                     lirOperations.add(LirCom(op2))
                     lirOperations.add(LirBic(op2, dst))
@@ -408,8 +421,8 @@ class PDP11Generator(program: Program) : Generator(program) {
 
                 Operator.XOR -> {
                     val tempReg = allocReg()
-                    lirOperations.add(LirMov(dst, operation.operand1.toLirOp()))
-                    lirOperations.add(LirMov(tempReg, operation.operand2.toLirOp()))
+                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
+                    lirOperations.add(LirMov(operation.operand2.toLirOp(), tempReg))
                     lirOperations.add(LirXor(tempReg, dst))
                 }
                 Operator.MOD -> TODO()
