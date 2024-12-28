@@ -2,15 +2,12 @@
 
 var arr = {1, 2, 3};
 
+fun f1(x, y) {
+    return x + y;
+}
+
 fun main(arg1, arg2) {
     a = 1;
-    b = 2;
-    a = a + arg1;
-    b = a + b;
-    b = 2 - b;
-    (b == 0) ? {
-        b = b + arr[2];
-    } : (b = 3);
-    arr[1] = b;
-    return b;
+    b = 2 + arg1;
+    return f1(a, b);
 }

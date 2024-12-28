@@ -29,6 +29,7 @@ class IrGenerator(val program: Program) {
                 }
             }
         }
+        val gen = PDP11Generator(program)
         for (function in program.functions) {
             currentFunction = function
             operations = mutableListOf()
@@ -52,9 +53,7 @@ class IrGenerator(val program: Program) {
                 operations
             )
             printOperations(operations)
-            val gen = PDP11Generator(program)
             gen.generate(operations)
-
         }
     }
 
@@ -177,7 +176,7 @@ class IrGenerator(val program: Program) {
     }
 
     private fun nextRegister(): String {
-        return "R${regCount++}"
+        return "%${regCount++}"
     }
 
     private fun jumpIfNot(operand: Operand, label: String) : Operation.IfNot {

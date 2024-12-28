@@ -6,20 +6,17 @@ import org.pingwiner.compiler.parser.Program
 
 class PDP11Generator(program: Program) : Generator(program) {
     private val globalVarsAllocMap = mutableMapOf<String, Int>()
-    private val baseAddr = 0x3000
+    private val baseAddr = 1024
     private var nextRegNumber = 0
-    companion object {
-        const val SIZE_OF_INT = 2
-    }
 
     private fun allocReg(): LirOperand {
         nextRegNumber++
-        val regName = "LR$nextRegNumber"
+        val regName = "%%$nextRegNumber"
         return LirOperand(LirOperandType.register, regName, 0)
     }
 
     private fun allocVars() {
-        var addr =baseAddr
+        var addr = baseAddr
         for(v in program.globalVars.values) {
             globalVarsAllocMap[v.name] = addr
             addr += v.size * 2
@@ -134,6 +131,25 @@ class PDP11Generator(program: Program) : Generator(program) {
         return usage
     }
 
+    val squashedRegisters = mutableMapOf<String, String>()
+
+    fun Operand.toLirOp() : LirOperand {
+        return when(this.type) {
+            OperandType.Register -> {
+                if (squashedRegisters.containsKey(this.name)) {
+                    LirOperand(LirOperandType.localVar, squashedRegisters[this.name]!!, 0)
+                } else {
+                    LirOperand(LirOperandType.register, this.name, 0)
+                }
+            }
+            OperandType.ImmediateValue -> LirOperand(LirOperandType.immediate, "", this.value ?: 0)
+            OperandType.LocalVariable -> LirOperand(LirOperandType.localVar, this.name, 0)
+            OperandType.GlobalVariable -> LirOperand(LirOperandType.globalVar, this.name, 0)
+            OperandType.Label -> TODO()
+            OperandType.Phi -> TODO()
+        }
+    }
+
     fun squashSsaAssignments(operations: List<Operation>): List<Operation> {
         var regValMap = mutableMapOf<String, String>()
         var i = 0
@@ -162,6 +178,7 @@ class PDP11Generator(program: Program) : Generator(program) {
                                                 op.operator
                                             )
                                             result.add(checkOperand2(newOp, regValMap))
+                                            squashedRegisters[op.result.name] = newOp.result.name
                                             i++
                                             skipNextOp = true
                                             continue
@@ -370,6 +387,7 @@ class PDP11Generator(program: Program) : Generator(program) {
             lirOperations.add(LirPush(arg.toLirOp()))
         }
         lirOperations.add(LirCall(op.label.name))
+        lirOperations.add(LirMov(Operand("R0", OperandType.Register, 0).toLirOp(), op.result.toLirOp()))
         lirOperations.add(LirAlign(op.args.size))
         lirOperations.add(LirPopRegs())
     }
@@ -449,10 +467,18 @@ class PDP11Generator(program: Program) : Generator(program) {
     private fun makeInPlaceBinaryOperation(operation: Operation.BinaryOperation) {
         when(operation.operator) {
             Operator.PLUS -> {
-                lirOperations.add(LirAdd(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+                if ((operation.operand2.type == OperandType.ImmediateValue) && (operation.operand2.value == 1)) {
+                    lirOperations.add(LirInc(operation.operand1.toLirOp()))
+                } else {
+                    lirOperations.add(LirAdd(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+                }
             }
             Operator.MINUS -> {
-                lirOperations.add(LirSub(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+                if ((operation.operand2.type == OperandType.ImmediateValue) && (operation.operand2.value == 1)) {
+                    lirOperations.add(LirDec(operation.operand1.toLirOp()))
+                } else {
+                    lirOperations.add(LirSub(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
+                }
             }
             Operator.MULTIPLY -> TODO()
             Operator.DIVIDE -> TODO()
@@ -494,13 +520,3 @@ class PDP11Generator(program: Program) : Generator(program) {
 }
 
 
-fun Operand.toLirOp() : LirOperand {
-    return when(this.type) {
-        OperandType.Register -> LirOperand(LirOperandType.register, this.name, 0)
-        OperandType.ImmediateValue -> LirOperand(LirOperandType.immediate, "", this.value ?: 0)
-        OperandType.LocalVariable -> LirOperand(LirOperandType.localVar, this.name, 0)
-        OperandType.GlobalVariable -> LirOperand(LirOperandType.globalVar, this.name, 0)
-        OperandType.Label -> TODO()
-        OperandType.Phi -> TODO()
-    }
-}
