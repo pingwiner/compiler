@@ -293,3 +293,9 @@ class Push(src: Operand) : Mov(src, Operand(Mode.AutoDec, Reg.SP))
 
 // Pop operand from stack
 class Pop(dst: Operand) : Mov(Operand(Mode.AutoInc, Reg.SP), dst)
+
+class Sob(val reg: Reg, val dst: Int) : SpecialInstruction("SOB", 0x3f) {
+    override fun value(): Int {
+        return (opcode shl 9) + (reg.value shl 6) + (dst and 0b111_111)
+    }
+}

@@ -8,6 +8,6 @@ fun f1(x, y) {
 
 fun main(arg1, arg2) {
     a = 1;
-    b = 2 + arg1;
+    b = 2 + arg1 >> arg2;
     return f1(a, b);
 }

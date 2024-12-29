@@ -179,9 +179,15 @@ class LirJmi(val label: String): LirInstruction() {
     }
 }
 
-class LirJmpAbs(val op: Operand): LirInstruction() {
+class LirJmpAbs(val op: LirOperand): LirInstruction() {
     override fun toString(): String {
         return "JMP $op"
+    }
+}
+
+class LirSob(val reg: LirOperand, val label: String) : LirInstruction() {
+    override fun toString(): String {
+        return "SOB $reg, $label"
     }
 }
 
@@ -205,11 +211,15 @@ class LirPop(val op: LirOperand): LirInstruction() {
         return "POP $op"
     }
 }
+
+//Push all used registers
 class LirPushRegs(): LirInstruction() {
     override fun toString(): String {
         return "PUSH ALL"
     }
 }
+
+//Pop all registers, saved by previous PushRegs
 class LirPopRegs(): LirInstruction() {
     override fun toString(): String {
         return "POP ALL"

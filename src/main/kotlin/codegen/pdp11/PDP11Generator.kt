@@ -387,9 +387,9 @@ class PDP11Generator(program: Program) : Generator(program) {
             lirOperations.add(LirPush(arg.toLirOp()))
         }
         lirOperations.add(LirCall(op.label.name))
-        lirOperations.add(LirMov(Operand("R0", OperandType.Register, 0).toLirOp(), op.result.toLirOp()))
         lirOperations.add(LirAlign(op.args.size))
         lirOperations.add(LirPopRegs())
+        lirOperations.add(LirMov(Operand("R0", OperandType.Register, 0).toLirOp(), op.result.toLirOp()))
     }
 
     private fun jmpIfNot(operator: Operator, label: Operand): LirInstruction {
@@ -513,7 +513,15 @@ class PDP11Generator(program: Program) : Generator(program) {
                 )
             }
         } else {
-            TODO()
+            val r = allocReg()
+            lirOperations.add(LirMov(operation.operand2.toLirOp(), r))
+            val label = "label" + lirOperations.size
+            lirOperations.add(LirLabel(label))
+            if (operation.operator == Operator.SHR)
+                lirOperations.add(LirAsr(operation.operand1.toLirOp()))
+            else
+                lirOperations.add(LirAsl(operation.operand1.toLirOp()))
+            lirOperations.add(LirSob(r, label))
         }
     }
 
