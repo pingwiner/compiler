@@ -24,48 +24,50 @@ data class LirOperand(
 
 abstract class LirInstruction
 
-class LirMov(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+abstract class DoubleOpInstruction(var src: LirOperand, var dst: LirOperand) : LirInstruction()
+
+class LirMov(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "MOV $src, $dst"
     }
 }
-class LirAdd(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirAdd(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "ADD $src, $dst"
     }
 }
-class LirSub(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirSub(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "SUB $src, $dst"
     }
 }
-class LirCmp(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirCmp(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "CMP $src, $dst"
     }
 }
-class LirBit(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirBit(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "BIT $src, $dst"
     }
 }
-class LirBic(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirBic(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "BIC $src, $dst"
     }
 }
-class LirBis(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirBis(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "BIS $src, $dst"
     }
 }
-class LirXor(val src: LirOperand, val dst: LirOperand) : LirInstruction() {
+class LirXor(src: LirOperand, dst: LirOperand) : DoubleOpInstruction(src, dst) {
     override fun toString(): String {
         return "XOR $src, $dst"
     }
 }
 
-abstract class SingleOpInstruction(val op: LirOperand) : LirInstruction()
+abstract class SingleOpInstruction(var op: LirOperand) : LirInstruction()
 
 class LirSwab(op: LirOperand): SingleOpInstruction(op) {
     override fun toString(): String {
@@ -196,7 +198,7 @@ class LirCall(val label: String): LirInstruction() {
         return "CALL $label"
     }
 }
-class LirRet(): LirInstruction() {
+class LirRet: LirInstruction() {
     override fun toString(): String {
         return "RET"
     }

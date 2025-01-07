@@ -47,86 +47,30 @@ class PDP11Generator(program: Program) : Generator(program) {
         throw IllegalArgumentException("Function $funcName has no local variable $varName")
     }
 
-    class RegUsage {
-        private val data = mutableMapOf<String, Pair<Int, Int>>()
-
-        fun create(op: Operand, index: Int) {
-            if (op.type == OperandType.Register) {
-                if (!data.containsKey(op.name)) {
-                    data[op.name] = Pair(index, index)
-                } else {
-                    use(op, index)
-                }
-            }
-        }
-        
-        fun use(op: Operand, index: Int) {
-            if (op.type == OperandType.Register) {
-                val oldVal = data[op.name]
-                data[op.name] = oldVal!!.copy(second = index)
-            }            
-        }
-
-        fun isRegUsed(name: String, index: Int): Boolean {
-            val v = data[name] ?: return false
-            return (v.first <= index) and (v.second >= index)
-        }
-        
-        fun getUsedRegs(index: Int): Set<String> {
-            val result = mutableSetOf<String>()
-            val regs = data.keys
-            for (reg in regs) {
-                if (isRegUsed(reg, index)) {
-                    result.add(reg)
-                }
-            }
-            return result
-        }
-    }
-
-    fun getRegUsage(operations: List<Operation>): RegUsage {
-        var i = 0
+    private fun getRegUsage(operations: List<LirInstruction>): RegUsage {
         val usage = RegUsage()
-        for (op in operations) {
-            usage.create(op.result, i)
+        for ((i, op) in operations.withIndex()) {
             when (op) {
-                is Operation.BinaryOperation -> {
-                    usage.use(op.operand1, i)
-                    usage.use(op.operand2, i)
+                is DoubleOpInstruction -> {
+                    usage.use(op.src, i)
+                    usage.use(op.dst, i)
                 }
-                is Operation.Assignment -> {
-                    usage.use(op.operand, i)
+                is SingleOpInstruction -> {
+                    usage.use(op.op, i)
                 }
-                is Operation.Call -> {
-                    for (arg in op.args) {
-                        usage.use(arg, i)
-                    }
+                is LirJmpAbs -> {
+                    usage.use(op.op, i)
                 }
-                is Operation.Goto -> {}
-                is Operation.IfNot -> {
-                    usage.use(op.condition, i)
+                is LirSob -> {
+                    usage.use(op.reg, i)
                 }
-                is Operation.Inv -> {
-                    usage.use(op.operand, i)
+                is LirPush -> {
+                    usage.use(op.op, i)
                 }
-                is Operation.Label -> {}
-                is Operation.Load -> {
-                    usage.use(op.index, i)
-                }
-                is Operation.Neg -> {
-                    usage.use(op.operand, i)
-                }
-                is Operation.Return -> {
-                    usage.use(op.result, i)
-                }
-                is Operation.SetResult -> {
-                    usage.use(op.result, i)
-                }
-                is Operation.Store -> {
-                    usage.use(op.index, i)
+                is LirPop -> {
+                    usage.use(op.op, i)
                 }
             }
-            i++
         }
         return usage
     }
@@ -285,9 +229,74 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     val lirOperations = mutableListOf<LirInstruction>()
 
-    fun printRegUsage(operations: List<Operation>) {
-        val usage = getRegUsage(operations)
-        for (i in operations.indices) {
+    fun reduceRegUsage(instructions: List<LirInstruction>) {
+        val regUsage = getRegUsage(instructions)
+        val regs = mutableMapOf<String, String>()
+
+        fun getRegFor(regVal: String): String {
+            for (reg in regs.keys) {
+                if (regs[reg] == regVal) return reg
+            }
+            var regNum = 0
+            while(true) {
+                val regName = "R$regNum"
+                if (!regs.containsKey(regName) || regs[regName]?.isEmpty() == true) {
+                    regs[regName] = regVal
+                    return regName
+                }
+                regNum++
+            }
+        }
+
+        fun clearRegs(i: Int) {
+            for (reg in regs.keys) {
+                if (!regUsage.isRegUsed(regs[reg]!!, i)) {
+                    regs[reg] = ""
+                }
+            }
+        }
+
+        for ((i, instruction) in instructions.withIndex()) {
+            clearRegs(i)
+            when (instruction) {
+                is DoubleOpInstruction -> {
+                    if (instruction.src.type == LirOperandType.register) {
+                        val newSrc = getRegFor(instruction.src.name)
+                        instruction.src = instruction.src.copy(
+                            name = newSrc
+                        )
+                    }
+                    if (instruction.dst.type == LirOperandType.register) {
+                        val newDst = getRegFor(instruction.dst.name)
+                        instruction.dst = instruction.dst.copy(
+                            name = newDst
+                        )
+                    }
+                }
+                is SingleOpInstruction -> {
+                    if (instruction.op.type == LirOperandType.register) {
+                        val newOp = getRegFor(instruction.op.name)
+                        instruction.op = instruction.op.copy(
+                            name = newOp
+                        )
+                    }
+                }
+                is LirJmpAbs -> {
+                }
+                is LirSob -> {
+                }
+                is LirPush -> {
+                }
+                is LirPop -> {
+                }
+            }
+
+        }
+    }
+
+    fun printRegUsage(instructions: List<LirInstruction>) {
+        val usage = getRegUsage(instructions)
+        for (i in instructions.indices) {
             val regs = usage.getUsedRegs(i)
             val sb = StringBuilder()
             for (r in regs) {
@@ -377,7 +386,10 @@ class PDP11Generator(program: Program) : Generator(program) {
                 }
             }
         }
+
+        reduceRegUsage(lirOperations)
         printLirOperations()
+        //printRegUsage(lirOperations)
         return ByteArray(0)
     }
 
