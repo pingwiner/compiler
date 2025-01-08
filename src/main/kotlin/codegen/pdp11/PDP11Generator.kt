@@ -47,34 +47,6 @@ class PDP11Generator(program: Program) : Generator(program) {
         throw IllegalArgumentException("Function $funcName has no local variable $varName")
     }
 
-    private fun getRegUsage(operations: List<LirInstruction>): RegUsage {
-        val usage = RegUsage()
-        for ((i, op) in operations.withIndex()) {
-            when (op) {
-                is DoubleOpInstruction -> {
-                    usage.use(op.src, i)
-                    usage.use(op.dst, i)
-                }
-                is SingleOpInstruction -> {
-                    usage.use(op.op, i)
-                }
-                is LirJmpAbs -> {
-                    usage.use(op.op, i)
-                }
-                is LirSob -> {
-                    usage.use(op.reg, i)
-                }
-                is LirPush -> {
-                    usage.use(op.op, i)
-                }
-                is LirPop -> {
-                    usage.use(op.op, i)
-                }
-            }
-        }
-        return usage
-    }
-
     val squashedRegisters = mutableMapOf<String, String>()
 
     fun Operand.toLirOp() : LirOperand {
@@ -229,115 +201,21 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     val lirOperations = mutableListOf<LirInstruction>()
 
-    fun reduceRegUsage(instructions: List<LirInstruction>) {
-        val regUsage = getRegUsage(instructions)
-        val regs = mutableMapOf<String, String>()
-
-        fun getRegFor(regVal: String): String {
-            for (reg in regs.keys) {
-                if (regs[reg] == regVal) return reg
-            }
-            var regNum = 0
-            while(true) {
-                val regName = "R$regNum"
-                if (!regs.containsKey(regName) || regs[regName]?.isEmpty() == true) {
-                    regs[regName] = regVal
-                    return regName
-                }
-                regNum++
-            }
-        }
-
-        fun clearRegs(i: Int) {
-            for (reg in regs.keys) {
-                if (!regUsage.isRegUsed(regs[reg]!!, i)) {
-                    regs[reg] = ""
-                }
-            }
-        }
-
-        for ((i, instruction) in instructions.withIndex()) {
-            clearRegs(i)
-            when (instruction) {
-                is DoubleOpInstruction -> {
-                    if (instruction.src.type == LirOperandType.register) {
-                        val newSrc = getRegFor(instruction.src.name)
-                        instruction.src = instruction.src.copy(
-                            name = newSrc
-                        )
-                    }
-                    if (instruction.dst.type == LirOperandType.register) {
-                        val newDst = getRegFor(instruction.dst.name)
-                        instruction.dst = instruction.dst.copy(
-                            name = newDst
-                        )
-                    }
-                }
-                is SingleOpInstruction -> {
-                    if (instruction.op.type == LirOperandType.register) {
-                        val newOp = getRegFor(instruction.op.name)
-                        instruction.op = instruction.op.copy(
-                            name = newOp
-                        )
-                    }
-                }
-                is LirJmpAbs -> {
-                    if (instruction.op.type == LirOperandType.register) {
-                        val newOp = getRegFor(instruction.op.name)
-                        instruction.op = instruction.op.copy(
-                            name = newOp
-                        )
-                    }
-                }
-                is LirSob -> {
-                    if (instruction.reg.type == LirOperandType.register) {
-                        val newOp = getRegFor(instruction.reg.name)
-                        instruction.reg = instruction.reg.copy(
-                            name = newOp
-                        )
-                    }
-                }
-                is LirPush -> {
-                    if (instruction.op.type == LirOperandType.register) {
-                        val newOp = getRegFor(instruction.op.name)
-                        instruction.op = instruction.op.copy(
-                            name = newOp
-                        )
-                    }
-                }
-                is LirPop -> {
-                    if (instruction.op.type == LirOperandType.register) {
-                        val newOp = getRegFor(instruction.op.name)
-                        instruction.op = instruction.op.copy(
-                            name = newOp
-                        )
-                    }
-                }
-            }
-
-        }
-    }
-
-    fun printRegUsage(instructions: List<LirInstruction>) {
-        val usage = getRegUsage(instructions)
-        for (i in instructions.indices) {
-            val regs = usage.getUsedRegs(i)
-            val sb = StringBuilder()
-            for (r in regs) {
-                sb.append(r)
-                if (r != regs.last()) sb.append(", ")
-            }
-            println(sb.toString())
-        }
-    }
-
-    fun printLirOperations() {
-        for (op in lirOperations) {
+    fun printLirOperations(operations: List<LirInstruction>) {
+        for (op in operations) {
             println(op.toString())
         }
     }
 
-    override fun generate(irOperations: List<Operation>): ByteArray {
+    data class LirFunction(
+        val name: String,
+        var instructions: List<LirInstruction>,
+        val usedRegisters: Set<String>
+    )
+
+    val functions = mutableMapOf<String, LirFunction>()
+
+    override fun addFunction(name: String, irOperations: List<Operation>) {
         val operations = squashSsaAssignments(irOperations)
 
         lirOperations.clear()
@@ -411,10 +289,58 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
         }
 
-        reduceRegUsage(lirOperations)
-        printLirOperations()
-        //printRegUsage(lirOperations)
-        return ByteArray(0)
+        val usedRegs = reduceRegUsage(lirOperations)
+        val instructions = mutableListOf<LirInstruction>()
+        instructions.addAll(lirOperations)
+        functions[name] = LirFunction(
+            name,
+            instructions,
+            usedRegs
+        )
+    }
+
+    private fun lookupForFunctionCall(instructions: List<LirInstruction>, index: Int): String {
+        var i = index
+        while(instructions[i] !is LirCall) i++
+        return (instructions[i] as LirCall).label
+    }
+
+    private fun replacePushPopRegs() {
+        for (function in functions.values) {
+            val newInstructionList = mutableListOf<LirInstruction>()
+            val stack = ArrayDeque<String>()
+            for ((index, instruction) in function.instructions.withIndex()) {
+                if (instruction is LirPushRegs) {
+                    val functionName = lookupForFunctionCall(function.instructions, index)
+                    // Don't save R0 because it's used for return value
+                    val regsToPush = functions[functionName]?.usedRegisters?.filter { it != "R0" }
+                    stack.clear()
+                    regsToPush?.let {
+                        for (reg in it) {
+                            newInstructionList.add(LirPush(LirOperand(LirOperandType.register, reg, 0)))
+                            stack.addLast(reg)
+                        }
+                    }
+                } else if (instruction is LirPopRegs) {
+                    while(stack.size > 0) {
+                        val reg = stack.removeLast()
+                        newInstructionList.add(LirPop(LirOperand(LirOperandType.register, reg, 0)))
+                    }
+                } else {
+                    newInstructionList.add(instruction)
+                }
+            }
+            function.instructions = newInstructionList
+        }
+    }
+
+    override fun generateAssemblyCode(): String {
+        replacePushPopRegs()
+        for (func in functions.values) {
+            func.instructions = removeUselessMovs(func.instructions)
+            printLirOperations(func.instructions)
+        }
+        return ""
     }
 
     private fun makeCall(op: Operation.Call) {
@@ -499,6 +425,9 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
         }
     }
+
+    private fun removeUselessMovs(instructions: List<LirInstruction>): List<LirInstruction> =
+        instructions.filter { (it !is LirMov) || (it.src != it.dst) }
 
     private fun makeInPlaceBinaryOperation(operation: Operation.BinaryOperation) {
         when(operation.operator) {

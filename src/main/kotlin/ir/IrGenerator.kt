@@ -53,8 +53,9 @@ class IrGenerator(val program: Program) {
                 operations
             )
             printOperations(operations)
-            gen.generate(operations)
+            gen.addFunction(currentFunction.name, operations)
         }
+        gen.generateAssemblyCode()
     }
 
     private fun generateFrom(node: ASTNode) {

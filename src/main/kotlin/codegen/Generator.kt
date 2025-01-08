@@ -4,6 +4,7 @@ import org.pingwiner.compiler.parser.Program
 
 abstract class Generator(val program: Program) {
 
-    abstract fun generate(operations: List<Operation>): ByteArray
+    abstract fun addFunction(name: String, operations: List<Operation>)
+    abstract fun generateAssemblyCode(): String
 
 }
