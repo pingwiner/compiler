@@ -282,12 +282,36 @@ class PDP11Generator(program: Program) : Generator(program) {
                     }
                 }
                 is LirJmpAbs -> {
+                    if (instruction.op.type == LirOperandType.register) {
+                        val newOp = getRegFor(instruction.op.name)
+                        instruction.op = instruction.op.copy(
+                            name = newOp
+                        )
+                    }
                 }
                 is LirSob -> {
+                    if (instruction.reg.type == LirOperandType.register) {
+                        val newOp = getRegFor(instruction.reg.name)
+                        instruction.reg = instruction.reg.copy(
+                            name = newOp
+                        )
+                    }
                 }
                 is LirPush -> {
+                    if (instruction.op.type == LirOperandType.register) {
+                        val newOp = getRegFor(instruction.op.name)
+                        instruction.op = instruction.op.copy(
+                            name = newOp
+                        )
+                    }
                 }
                 is LirPop -> {
+                    if (instruction.op.type == LirOperandType.register) {
+                        val newOp = getRegFor(instruction.op.name)
+                        instruction.op = instruction.op.copy(
+                            name = newOp
+                        )
+                    }
                 }
             }
 

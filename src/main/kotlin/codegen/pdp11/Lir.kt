@@ -181,13 +181,13 @@ class LirJmi(val label: String): LirInstruction() {
     }
 }
 
-class LirJmpAbs(val op: LirOperand): LirInstruction() {
+class LirJmpAbs(var op: LirOperand): LirInstruction() {
     override fun toString(): String {
         return "JMP $op"
     }
 }
 
-class LirSob(val reg: LirOperand, val label: String) : LirInstruction() {
+class LirSob(var reg: LirOperand, val label: String) : LirInstruction() {
     override fun toString(): String {
         return "SOB $reg, $label"
     }
@@ -203,12 +203,12 @@ class LirRet: LirInstruction() {
         return "RET"
     }
 }
-class LirPush(val op: LirOperand): LirInstruction() {
+class LirPush(var op: LirOperand): LirInstruction() {
     override fun toString(): String {
         return "PUSH $op"
     }
 }
-class LirPop(val op: LirOperand): LirInstruction() {
+class LirPop(var op: LirOperand): LirInstruction() {
     override fun toString(): String {
         return "POP $op"
     }
