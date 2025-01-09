@@ -3,11 +3,13 @@
 var arr = {1, 2, 3};
 
 fun f1(x, y) {
-    return x + y + 2;
+    return x + y + 2 - (x << y);
 }
 
 fun main(arg1, arg2) {
     a = 1;
     b = 2 + arg1 >> arg2;
-    return f1(a, b);
+    c = f1(a, b);
+    d = c + a + b - (2 - arg2 + (arg1 - arr[0])) ;
+    return d;
 }

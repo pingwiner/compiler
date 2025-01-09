@@ -305,10 +305,55 @@ class PDP11Generator(program: Program) : Generator(program) {
         return (instructions[i] as LirCall).label
     }
 
+    private fun canDiscard(name: String, instructions: List<LirInstruction>, startIndex: Int): Boolean {
+        var afterCall = false
+        fun check(operand: LirOperand): Boolean {
+            return (operand.type == LirOperandType.register) && (operand.name == name)
+        }
+
+        for (i in startIndex..<instructions.size) {
+            val op = instructions[i]
+            when (op) {
+                is DoubleOpInstruction -> {
+                    if (check(op.src)) return false
+                    if (check(op.dst)) return true
+                }
+
+                is SingleOpInstruction -> {
+                    if (check(op.op)) return false
+                }
+
+                is LirJmpAbs -> {
+                    if (check(op.op)) return false
+                }
+
+                is LirSob -> {
+                    if (check(op.reg)) return false
+                }
+
+                is LirPush -> {
+                    if (afterCall) {
+                        if (check(op.op)) return false
+                    }
+                }
+
+                is LirPop -> {
+                    if (check(op.op)) return false
+                }
+
+                is LirCall -> {
+                    afterCall = true
+                }
+            }
+        }
+        return true
+    }
+
     private fun replacePushPopRegs() {
         for (function in functions.values) {
             val newInstructionList = mutableListOf<LirInstruction>()
             val stack = ArrayDeque<String>()
+
             for ((index, instruction) in function.instructions.withIndex()) {
                 if (instruction is LirPushRegs) {
                     val functionName = lookupForFunctionCall(function.instructions, index)
@@ -317,8 +362,10 @@ class PDP11Generator(program: Program) : Generator(program) {
                     stack.clear()
                     regsToPush?.let {
                         for (reg in it) {
-                            newInstructionList.add(LirPush(LirOperand(LirOperandType.register, reg, 0)))
-                            stack.addLast(reg)
+                            if (!canDiscard(reg, function.instructions, index + 1)) {
+                                newInstructionList.add(LirPush(LirOperand(LirOperandType.register, reg, 0)))
+                                stack.addLast(reg)
+                            }
                         }
                     }
                 } else if (instruction is LirPopRegs) {
