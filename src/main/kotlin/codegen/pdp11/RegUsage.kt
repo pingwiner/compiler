@@ -4,7 +4,7 @@ class RegUsage {
     private val data = mutableMapOf<String, Pair<Int, Int>>()
 
     fun use(op: LirOperand, index: Int) {
-        if (op.type == LirOperandType.register) {
+        if (op.type == LirOperandType.Register) {
             if (op.name.startsWith("%")) {
                 if (!data.containsKey(op.name)) {
                     data[op.name] = Pair(index, index)
@@ -96,7 +96,7 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Set<String> {
     }
 
     fun isTempReg(op: LirOperand): Boolean {
-        return (op.type == LirOperandType.register) && op.name.startsWith("%")
+        return op.usesRegister() && op.name.startsWith("%")
     }
 
     for ((i, instruction) in instructions.withIndex()) {

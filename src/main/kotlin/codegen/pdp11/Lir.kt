@@ -1,11 +1,13 @@
 package org.pingwiner.compiler.codegen.pdp11
 
 enum class LirOperandType {
-    immediate,
-    localVar,
-    globalVar,
-    register,
-    indirect
+    Immediate, // #1024
+    LocalVar,  // a
+    GlobalVar, // globA
+    Register,  // R1
+    Indirect,  // (R1)
+    Absolute,  // 1024
+    Indexed    // 1024(R1)
 }
 
 data class LirOperand(
@@ -15,9 +17,26 @@ data class LirOperand(
 ) {
     override fun toString(): String {
         return when(type) {
-            LirOperandType.immediate -> "$value"
-            LirOperandType.indirect -> "[$name]"
+            LirOperandType.Immediate -> "#$value"
+            LirOperandType.Indirect -> "($name)"
+            LirOperandType.Absolute -> "$value"
+            LirOperandType.Indexed -> "$value($name)"
             else -> name
+        }
+    }
+
+    fun usesRegister() =
+        (type == LirOperandType.Register) ||
+        (type == LirOperandType.Indexed) ||
+        (type == LirOperandType.Indirect)
+
+    companion object {
+        fun absolute(address: Int): LirOperand {
+            return LirOperand(LirOperandType.Absolute, "", address)
+        }
+
+        fun indexed(name: String, offset: Int): LirOperand {
+            return LirOperand(LirOperandType.Indexed, name, offset)
         }
     }
 }
