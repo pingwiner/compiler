@@ -1,14 +1,16 @@
 #comment
 
-var arr = {1, 2, 3};
-
-fun f1(x) {
-    return x + 1;
-}
-
 fun main(arg1, arg2) {
-    a = 1;
-    b = arr[a];
-    c = f1(a);
-    return a + b + c;
+    a = arg1;
+    b = a + 1;
+    c = b + 2;
+    d = c + 3;
+    e = d + 4;
+    (e > 1) ? {
+        return 1;
+    };
+    f = e + 5;
+    g = f - 2;
+    h = g + 3;
+    return a + b + c - d + e + f + g + h;
 }

@@ -246,6 +246,11 @@ class LirPopRegs(): LirInstruction() {
         return "POP ALL"
     }
 }
+class LirReserve(val size: Int): LirInstruction() {
+    override fun toString(): String {
+        return "SUB SP, ${size*2}"
+    }
+}
 class LirAlign(val size: Int): LirInstruction() {
     override fun toString(): String {
         return "ADD SP, ${size*2}"

@@ -4,6 +4,8 @@ import org.pingwiner.compiler.codegen.*
 import org.pingwiner.compiler.codegen.Operand
 import org.pingwiner.compiler.parser.Program
 
+//TODO: implement stack access for local variables
+
 class PDP11Generator(program: Program) : Generator(program) {
     private val globalVarsAllocMap = mutableMapOf<String, Int>()
     private val baseAddr = 1024
@@ -30,16 +32,12 @@ class PDP11Generator(program: Program) : Generator(program) {
                 sb.append("${v.name}:\n    .WORD ${v.value?.get(0) ?: "0"}")
             } else {
                 sb.append("${v.name}:\n    .WORD ")
-                //if (v.value != null) {
-                    for (i in 0..<v.size) {
-                        sb.append("${v.value?.get(i) ?: 0}")
-                        if (i != v.size - 1) {
-                            sb.append(", ")
-                        }
+                for (i in 0..<v.size) {
+                    sb.append("${v.value?.get(i) ?: 0}")
+                    if (i != v.size - 1) {
+                        sb.append(", ")
                     }
-                //} else {
-                //    sb.append("? DUP ${v.size}")
-                //}
+                }
             }
             sb.append("\n")
         }
@@ -241,7 +239,8 @@ class PDP11Generator(program: Program) : Generator(program) {
     data class LirFunction(
         val name: String,
         var instructions: List<LirInstruction>,
-        val usedRegisters: Set<String>
+        val usedRegisters: Set<String>,
+        val localVars: List<String>
     )
 
     val functions = mutableMapOf<String, LirFunction>()
@@ -323,13 +322,39 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
         }
 
-        val usedRegs = reduceRegUsage(lirOperations)
+        val (usedRegs, usedVars) = reduceRegUsage(lirOperations)
         val instructions = mutableListOf<LirInstruction>()
         instructions.addAll(lirOperations)
+        val localVars = mutableListOf<String>()
+        val params = program.functions.find{ it.name == name }?.params
+        params?.let {
+            localVars.addAll(it)
+        }
+        val uniqVars = usedVars.filter { !localVars.contains(it) }
+        // Reserve stack space for local vars
+        if (uniqVars.isNotEmpty()) {
+            localVars.addAll(uniqVars)
+            instructions.add(1, LirReserve(uniqVars.size))
+        }
+
+        // Insert stack align before every ret instruction
+        if (localVars.isNotEmpty()) {
+            val newInstructions = mutableListOf<LirInstruction>()
+            for (instruction in instructions) {
+                if (instruction is LirRet) {
+                    newInstructions.add(LirAlign(localVars.size))
+                }
+                newInstructions.add(instruction)
+            }
+            instructions.clear()
+            instructions.addAll(newInstructions)
+        }
+
         functions[name] = LirFunction(
             name,
             instructions,
-            usedRegs
+            usedRegs,
+            localVars
         )
     }
 
@@ -436,7 +461,6 @@ class PDP11Generator(program: Program) : Generator(program) {
             lirOperations.add(LirPush(arg.toLirOp()))
         }
         lirOperations.add(LirCall(op.label.name))
-        lirOperations.add(LirAlign(op.args.size))
         lirOperations.add(LirPopRegs())
         lirOperations.add(LirMov(Operand("R0", OperandType.Register, 0).toLirOp(), op.result.toLirOp()))
     }

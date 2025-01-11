@@ -65,10 +65,11 @@ class RegUsage {
     }
 }
 
-fun reduceRegUsage(instructions: List<LirInstruction>): Set<String> {
+fun reduceRegUsage(instructions: List<LirInstruction>): Pair<Set<String>, Set<String>> {
     val regUsage = RegUsage.create(instructions)
     val regs = mutableMapOf<String, String>()
     val containsCalls = instructions.filterIsInstance<LirCall>().isNotEmpty()
+    val localVars = mutableSetOf<String>()
 
     fun getRegFor(regVal: String): String {
         for (reg in regs.keys) {
@@ -96,7 +97,25 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Set<String> {
     }
 
     fun isTempReg(op: LirOperand): Boolean {
+        if (op.type == LirOperandType.LocalVar) {
+            localVars.add(op.name)
+        }
         return op.usesRegister() && op.name.startsWith("%")
+    }
+
+    fun makeOperandFrom(op: LirOperand, newName: String): LirOperand {
+        val availableRegNames = setOf("R0", "R1", "R2", "R3", "R4", "R5")
+        return if (availableRegNames.contains(newName)) {
+            op.copy(
+                name = newName
+            )
+        } else {
+            localVars.add("_$newName")
+            op.copy(
+                name = "_$newName",
+                type = LirOperandType.LocalVar
+            )
+        }
     }
 
     for ((i, instruction) in instructions.withIndex()) {
@@ -105,60 +124,46 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Set<String> {
             is DoubleOpInstruction -> {
                 if (isTempReg(instruction.src)) {
                     val newSrc = getRegFor(instruction.src.name)
-                    instruction.src = instruction.src.copy(
-                        name = newSrc
-                    )
+                    instruction.src = makeOperandFrom(instruction.src, newSrc)
                 }
                 if (isTempReg(instruction.dst)) {
                     val newDst = getRegFor(instruction.dst.name)
-                    instruction.dst = instruction.dst.copy(
-                        name = newDst
-                    )
+                    instruction.dst = makeOperandFrom(instruction.dst, newDst)
                 }
             }
             is SingleOpInstruction -> {
                 if (isTempReg(instruction.op)) {
                     val newOp = getRegFor(instruction.op.name)
-                    instruction.op = instruction.op.copy(
-                        name = newOp
-                    )
+                    instruction.op = makeOperandFrom(instruction.op, newOp)
                 }
             }
             is LirJmpAbs -> {
                 if (isTempReg(instruction.op)) {
                     val newOp = getRegFor(instruction.op.name)
-                    instruction.op = instruction.op.copy(
-                        name = newOp
-                    )
+                    instruction.op = makeOperandFrom(instruction.op, newOp)
                 }
             }
             is LirSob -> {
                 if (isTempReg(instruction.reg)) {
-                    val newOp = getRegFor(instruction.reg.name)
-                    instruction.reg = instruction.reg.copy(
-                        name = newOp
-                    )
+                    val newReg = getRegFor(instruction.reg.name)
+                    instruction.reg = makeOperandFrom(instruction.reg, newReg)
                 }
             }
             is LirPush -> {
                 if (isTempReg(instruction.op)) {
                     val newOp = getRegFor(instruction.op.name)
-                    instruction.op = instruction.op.copy(
-                        name = newOp
-                    )
+                    instruction.op = makeOperandFrom(instruction.op, newOp)
                 }
             }
             is LirPop -> {
                 if (isTempReg(instruction.op)) {
                     val newOp = getRegFor(instruction.op.name)
-                    instruction.op = instruction.op.copy(
-                        name = newOp
-                    )
+                    instruction.op = makeOperandFrom(instruction.op, newOp)
                 }
             }
         }
     }
-    return regs.keys
+    return Pair(regs.keys, localVars)
 }
 
 fun printRegUsage(instructions: List<LirInstruction>) {
