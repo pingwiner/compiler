@@ -13,14 +13,20 @@ enum class LirOperandType {
 data class LirOperand(
     val type: LirOperandType,
     val name: String,
-    val value: Int
+    val value: Int,
+    val valueStr: String = ""
 ) {
     override fun toString(): String {
         return when(type) {
             LirOperandType.Immediate -> "#$value"
             LirOperandType.Indirect -> "($name)"
             LirOperandType.Absolute -> "$value"
-            LirOperandType.Indexed -> "$value($name)"
+            LirOperandType.Indexed -> {
+                if (valueStr.isEmpty())
+                    "$value($name)"
+                else
+                    "$valueStr($name)"
+            }
             else -> name
         }
     }
@@ -248,12 +254,12 @@ class LirPopRegs(): LirInstruction() {
 }
 class LirReserve(val size: Int): LirInstruction() {
     override fun toString(): String {
-        return "SUB SP, ${size*2}"
+        return "SUB SP, #${size*2}"
     }
 }
 class LirAlign(val size: Int): LirInstruction() {
     override fun toString(): String {
-        return "ADD SP, ${size*2}"
+        return "ADD SP, #${size*2}"
     }
 }
 

@@ -236,13 +236,6 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
     }
 
-    data class LirFunction(
-        val name: String,
-        var instructions: List<LirInstruction>,
-        val usedRegisters: Set<String>,
-        val localVars: List<String>
-    )
-
     val functions = mutableMapOf<String, LirFunction>()
 
     override fun addFunction(name: String, irOperations: List<Operation>) {
@@ -295,11 +288,28 @@ class PDP11Generator(program: Program) : Generator(program) {
                 is Operation.Load -> {
                     val r = op.result.toLirOp()
                     if (op.index.type == OperandType.ImmediateValue) {
-                        lirOperations.add(LirMov(LirOperand.absolute(globalVarsAllocMap[op.base.name]!! + op.index.value!! * 2), r))
+                        lirOperations.add(
+                            LirMov(
+                                LirOperand(
+                                    type = LirOperandType.GlobalVar,
+                                    name = "${op.base.name} + ${op.index.value!! * 2}",
+                                    value = 0),
+                                r
+                            )
+                        )
                     } else {
                         lirOperations.add(LirMov(op.index.toLirOp(), r))
                         lirOperations.add(LirAsl(r))
-                        lirOperations.add(LirMov(LirOperand.indexed(r.name, globalVarsAllocMap[op.base.name]!!), r))
+                        lirOperations.add(
+                            LirMov(
+                                LirOperand(
+                                    type = LirOperandType.Indexed,
+                                    name = r.name,
+                                    value = 0,
+                                    valueStr = op.base.name),
+                                r
+                            )
+                        )
                     }
                 }
                 is Operation.Neg -> {
@@ -314,10 +324,30 @@ class PDP11Generator(program: Program) : Generator(program) {
                 }
                 is Operation.Store -> {
                     val r = allocReg()
-                    lirOperations.add(LirMov(op.index.toLirOp(), r))
-                    lirOperations.add(LirAsl(r))
-                    lirOperations.add(LirAdd(op.base.toLirOp(), r))
-                    lirOperations.add(LirMov(op.result.toLirOp(), r.copy(type = LirOperandType.Indirect)))
+                    if (op.index.type == OperandType.ImmediateValue) {
+                        lirOperations.add(
+                            LirMov(
+                                op.result.toLirOp(),
+                                LirOperand(
+                                    type = LirOperandType.GlobalVar,
+                                    name = "${op.base.name} + ${op.index.value!! * 2}",
+                                    value = 0)
+                            )
+                        )
+                    } else {
+                        lirOperations.add(LirMov(op.index.toLirOp(), r))
+                        lirOperations.add(LirAsl(r))
+                        lirOperations.add(
+                            LirMov(
+                                op.result.toLirOp(),
+                                LirOperand(
+                                    type = LirOperandType.Indexed,
+                                    name = r.name,
+                                    value = 0,
+                                    valueStr = op.base.name)
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -338,11 +368,11 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
 
         // Insert stack align before every ret instruction
-        if (localVars.isNotEmpty()) {
+        if (uniqVars.isNotEmpty()) {
             val newInstructions = mutableListOf<LirInstruction>()
             for (instruction in instructions) {
                 if (instruction is LirRet) {
-                    newInstructions.add(LirAlign(localVars.size))
+                    newInstructions.add(LirAlign(uniqVars.size))
                 }
                 newInstructions.add(instruction)
             }
@@ -362,6 +392,61 @@ class PDP11Generator(program: Program) : Generator(program) {
         var i = index
         while(instructions[i] !is LirCall) i++
         return (instructions[i] as LirCall).label
+    }
+
+    private fun replaceLocalVars(lirFunction: LirFunction) {
+        fun replaceOperand(operand: LirOperand): LirOperand {
+            if (operand.type != LirOperandType.LocalVar) return operand
+            var offset = lirFunction.getLocalVarOffset(operand.name)
+            if (program.functions.find { it.name == lirFunction.name }?.params?.contains(operand.name) == true) {
+               offset += 2
+            }
+            if (offset == 0) {
+                return LirOperand(
+                    name = "SP",
+                    type = LirOperandType.Indirect,
+                    value = 0
+                )
+            }
+            return LirOperand(
+                name = "SP",
+                type = LirOperandType.Indexed,
+                value = offset
+            )
+        }
+
+        for (op in lirFunction.instructions) {
+            when (op) {
+                is DoubleOpInstruction -> {
+                    op.src = replaceOperand(op.src)
+                    op.dst = replaceOperand(op.dst)
+                }
+
+                is SingleOpInstruction -> {
+                    op.op = replaceOperand(op.op)
+                }
+
+                is LirJmpAbs -> {
+                    op.op = replaceOperand(op.op)
+                }
+
+                is LirSob -> {
+                    if (op.reg.type != LirOperandType.Register) {
+                        throw IllegalArgumentException(op.reg.name + " must be register")
+                    }
+                }
+
+                is LirPush -> {
+                    op.op = replaceOperand(op.op)
+                }
+
+                is LirPop -> {
+                    if (op.op.type != LirOperandType.Register) {
+                        throw IllegalArgumentException(op.op.name + " must be register")
+                    }
+                }
+            }
+        }
     }
 
     private fun canDiscard(name: String, instructions: List<LirInstruction>, startIndex: Int): Boolean {
@@ -412,12 +497,13 @@ class PDP11Generator(program: Program) : Generator(program) {
         for (function in functions.values) {
             val newInstructionList = mutableListOf<LirInstruction>()
             val stack = ArrayDeque<String>()
+            val regNames = setOf("R1", "R2", "R3", "R4", "R5")
 
             for ((index, instruction) in function.instructions.withIndex()) {
                 if (instruction is LirPushRegs) {
                     val functionName = lookupForFunctionCall(function.instructions, index)
                     // Don't save R0 because it's used for return value
-                    val regsToPush = functions[functionName]?.usedRegisters?.filter { it != "R0" }
+                    val regsToPush = functions[functionName]?.usedRegisters?.filter { regNames.contains(it) }
                     stack.clear()
                     regsToPush?.let {
                         for (reg in it) {
@@ -442,16 +528,13 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     override fun generateAssemblyCode(): String {
         replacePushPopRegs()
-
         println("    .LINK $baseAddr\n")
-        println("    JMP main\n")
-
-        println(printGlobalVariables())
-
-        for (func in functions.values) {
+        for (func in functions.values.sortedBy { it.name != "main" }) {
             func.instructions = removeUselessMovs(func.instructions)
+            replaceLocalVars(func)
             printLirOperations(func.instructions)
         }
+        println(printGlobalVariables())
         return ""
     }
 
@@ -461,6 +544,9 @@ class PDP11Generator(program: Program) : Generator(program) {
             lirOperations.add(LirPush(arg.toLirOp()))
         }
         lirOperations.add(LirCall(op.label.name))
+        if (op.args.isNotEmpty()) {
+            lirOperations.add(LirAlign(op.args.size))
+        }
         lirOperations.add(LirPopRegs())
         lirOperations.add(LirMov(Operand("R0", OperandType.Register, 0).toLirOp(), op.result.toLirOp()))
     }

@@ -1,16 +1,10 @@
-#comment
+var arr = {1, 2, 3, 4, 5};
+
+fun f1(x, y) {
+    return x + y;
+}
 
 fun main(arg1, arg2) {
-    a = arg1;
-    b = a + 1;
-    c = b + 2;
-    d = c + 3;
-    e = d + 4;
-    (e > 1) ? {
-        return 1;
-    };
-    f = e + 5;
-    g = f - 2;
-    h = g + 3;
-    return a + b + c - d + e + f + g + h;
+    a = f1(1, arg1);
+    return a;
 }

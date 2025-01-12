@@ -161,6 +161,7 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Pair<Set<String>, Set<St
                     instruction.op = makeOperandFrom(instruction.op, newOp)
                 }
             }
+
         }
     }
     return Pair(regs.keys, localVars)
