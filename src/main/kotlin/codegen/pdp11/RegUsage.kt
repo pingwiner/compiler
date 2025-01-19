@@ -72,6 +72,7 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Pair<Set<String>, Set<St
     val localVars = mutableSetOf<String>()
 
     fun getRegFor(regVal: String): String {
+        if (regVal == "_R0") return "_R0"
         for (reg in regs.keys) {
             if (regs[reg] == regVal) return reg
         }
@@ -98,6 +99,10 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Pair<Set<String>, Set<St
 
     fun isTempReg(op: LirOperand): Boolean {
         if (op.type == LirOperandType.LocalVar) {
+            if (op.name == "_R0") {
+                // Register R0 will be allocated for _R0 variable so just return true here
+                return true
+            }
             localVars.add(op.name)
         }
         return op.usesRegister() && op.name.startsWith("%")
@@ -105,6 +110,10 @@ fun reduceRegUsage(instructions: List<LirInstruction>): Pair<Set<String>, Set<St
 
     fun makeOperandFrom(op: LirOperand, newName: String): LirOperand {
         val availableRegNames = setOf("R0", "R1", "R2", "R3", "R4", "R5")
+        // Reserve R0 for local variable _R0
+        if ((op.type == LirOperandType.LocalVar) && (newName == "_R0")) {
+            return LirOperand(LirOperandType.Register, "R0", 0)
+        }
         return if (availableRegNames.contains(newName)) {
             op.copy(
                 name = newName

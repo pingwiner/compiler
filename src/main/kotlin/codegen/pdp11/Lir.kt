@@ -18,12 +18,12 @@ data class LirOperand(
 ) {
     override fun toString(): String {
         return when(type) {
-            LirOperandType.Immediate -> "#$value"
+            LirOperandType.Immediate -> "#${value.asOctal()}"
             LirOperandType.Indirect -> "($name)"
             LirOperandType.Absolute -> "$value"
             LirOperandType.Indexed -> {
                 if (valueStr.isEmpty())
-                    "$value($name)"
+                    "${value.asOctal()}($name)"
                 else
                     "$valueStr($name)"
             }

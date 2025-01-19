@@ -1,31 +1,36 @@
-var arr = {1, 2, 3, 4, 5};
-var g;
 
-fun f1() {
-    g = 1;
-    return g;
+fun f1(x, y) {
+    a = x % y;
+    return a;
 }
 
 fun main(arg1, arg2) {
-    a = f1();
-    a = a + arr[4] / 2;
+    a = f1(arg1, arg2);
     return a;
 }
 
 fun _div(x, y) {
-    retVal = 0;
+    _R0 = 0;
     {
         x = x - y;
-        retVal = retVal + 1;
+        _R0 = _R0 + 1;
     } while (x >= y);
-    return retVal;
+    return _R0;
 }
 
 fun _mul(x, y) {
-    result = 0;
+    _R0 = 0;
     {
-        result = result + x;
+        _R0 = _R0 + x;
         y = y - 1;
     } while(y > 0);
-    return result;
+    return _R0;
+}
+
+fun _mod(x, y) {
+    _R0 = x;
+    {
+        _R0 = _R0 - y;
+    } while (_R0 >= y);
+    return _R0;
 }

@@ -24,7 +24,8 @@ val operatorPriorityMap = mapOf(
     Operator.Plus::class to 8,
     Operator.Minus::class to 8,
     Operator.Multiply::class to 9,
-    Operator.Divide::class to 9
+    Operator.Divide::class to 9,
+    Operator.Mod::class to 9
 )
 
 val maxPriorityLevel = operatorPriorityMap.toList().maxByOrNull { (_, value) -> value }!!.second

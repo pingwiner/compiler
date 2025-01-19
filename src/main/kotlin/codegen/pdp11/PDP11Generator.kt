@@ -7,9 +7,11 @@ import org.pingwiner.compiler.parser.Program
 //TODO: implement stack access for local variables
 
 class PDP11Generator(program: Program) : Generator(program) {
-    private val globalVarsAllocMap = mutableMapOf<String, Int>()
-    private val baseAddr = 1024
+    private val baseAddr = oct(1000)
     private var nextRegNumber = 0
+    private val squashedRegisters = mutableMapOf<String, String>()
+    private val lirOperations = mutableListOf<LirInstruction>()
+    private val functions = mutableMapOf<String, LirFunction>()
 
     private fun allocReg(): LirOperand {
         nextRegNumber++
@@ -17,23 +19,15 @@ class PDP11Generator(program: Program) : Generator(program) {
         return LirOperand(LirOperandType.Register, regName, 0)
     }
 
-    private fun allocVars() {
-        var addr = baseAddr + 2
-        for(v in program.globalVars.values) {
-            globalVarsAllocMap[v.name] = addr
-            addr += v.size * 2
-        }
-    }
-
     private fun printGlobalVariables(): String {
         val sb = StringBuilder()
         for (v in program.globalVars.values) {
             if (v.size == 1) {
-                sb.append("${v.name}:\n    .WORD ${v.value?.get(0) ?: "0"}")
+                sb.append("${v.name}:\n    .WORD ${v.value?.get(0)?.asOctal() ?: "0"}")
             } else {
                 sb.append("${v.name}:\n    .WORD ")
                 for (i in 0..<v.size) {
-                    sb.append("${v.value?.get(i) ?: 0}")
+                    sb.append("${v.value?.get(i)?.asOctal() ?: 0}")
                     if (i != v.size - 1) {
                         sb.append(", ")
                     }
@@ -44,37 +38,7 @@ class PDP11Generator(program: Program) : Generator(program) {
         return sb.toString()
     }
 
-    init {
-        allocVars()
-    }
-
-    private fun getParamOffset(funcName: String, paramName: String): Int {
-        val func = program.functions.firstOrNull{ it.name == funcName} ?: throw IllegalArgumentException("No such function: $funcName")
-        var offset = func.vars.size * 2
-        for(param in func.params) {
-            if (param == paramName) {
-                return offset
-            }
-            offset += 2
-        }
-        throw IllegalArgumentException("Function $funcName has no parameter $paramName")
-    }
-
-    private fun getLocalVarOffset(funcName: String, varName: String): Int {
-        val func = program.functions.firstOrNull{ it.name == funcName} ?: throw IllegalArgumentException("No such function: $funcName")
-        var offset = 0
-        for (v in func.vars) {
-            if (v == varName) {
-                return offset
-            }
-            offset += 2
-        }
-        throw IllegalArgumentException("Function $funcName has no local variable $varName")
-    }
-
-    val squashedRegisters = mutableMapOf<String, String>()
-
-    fun Operand.toLirOp() : LirOperand {
+    private fun Operand.toLirOp() : LirOperand {
         return when(this.type) {
             OperandType.Register -> {
                 if (squashedRegisters.containsKey(this.name)) {
@@ -91,7 +55,7 @@ class PDP11Generator(program: Program) : Generator(program) {
         }
     }
 
-    fun squashSsaAssignments(operations: List<Operation>): List<Operation> {
+    private fun squashSsaAssignments(operations: List<Operation>): List<Operation> {
         var regValMap = mutableMapOf<String, String>()
         var i = 0
         var skipNextOp = false
@@ -224,8 +188,6 @@ class PDP11Generator(program: Program) : Generator(program) {
         return op
     }
 
-    val lirOperations = mutableListOf<LirInstruction>()
-
     private fun printLirOperations(operations: List<LirInstruction>) {
         for (op in operations) {
             if (op is LirLabel) {
@@ -235,8 +197,6 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
         }
     }
-
-    val functions = mutableMapOf<String, LirFunction>()
 
     override fun addFunction(name: String, irOperations: List<Operation>) {
         val operations = squashSsaAssignments(irOperations)
@@ -354,6 +314,10 @@ class PDP11Generator(program: Program) : Generator(program) {
 
         val (usedRegs, usedVars) = reduceRegUsage(lirOperations)
         val instructions = mutableListOf<LirInstruction>()
+        if (lirOperations.last() !is LirRet) {
+            lirOperations.add(LirRet())
+        }
+        removeUselessMovInTheEndOfFunction()
         instructions.addAll(lirOperations)
         val localVars = mutableListOf<String>()
         val params = program.functions.find{ it.name == name }?.params
@@ -528,7 +492,7 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     override fun generateAssemblyCode(): String {
         replacePushPopRegs()
-        println("    .LINK $baseAddr\n")
+        println(".LINK ${baseAddr.asOctal()}\n")
         for (func in functions.values.sortedBy { it.name != "main" }) {
             func.instructions = removeUselessMovs(func.instructions)
             replaceLocalVars(func)
@@ -575,7 +539,11 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     private fun create2OperandInstruction(operation: Operation.BinaryOperation) {
-        if ((operation.operand1.name == operation.result.name) && (operation.operand1.type == OperandType.LocalVariable)) {
+        if ((operation.operand1.name == operation.result.name) &&
+            (operation.operand1.type == OperandType.LocalVariable) &&
+            (operation.operator != org.pingwiner.compiler.codegen.Operator.MULTIPLY) &&
+            (operation.operator != org.pingwiner.compiler.codegen.Operator.DIVIDE) &&
+            (operation.operator != org.pingwiner.compiler.codegen.Operator.MOD)) {
             makeInPlaceBinaryOperation(operation)
         } else {
             val dst = operation.result.toLirOp()
@@ -631,7 +599,14 @@ class PDP11Generator(program: Program) : Generator(program) {
                     lirOperations.add(LirMov(operation.operand2.toLirOp(), tempReg))
                     lirOperations.add(LirXor(tempReg, dst))
                 }
-                Operator.MOD -> TODO()
+                Operator.MOD -> {
+                    callExtFun(
+                        "_mod",
+                        operation.operand1.toLirOp(),
+                        operation.operand2.toLirOp(),
+                        dst
+                    )
+                }
                 else -> {}
             }
         }
@@ -664,8 +639,6 @@ class PDP11Generator(program: Program) : Generator(program) {
                     lirOperations.add(LirSub(operation.operand2.toLirOp(), operation.operand1.toLirOp()))
                 }
             }
-            Operator.MULTIPLY -> TODO()
-            Operator.DIVIDE -> TODO()
             Operator.SHR -> makeShift(operation)
             Operator.SHL -> makeShift(operation)
             Operator.OR -> {
@@ -679,7 +652,6 @@ class PDP11Generator(program: Program) : Generator(program) {
             Operator.XOR -> { // should never happen
                 throw IllegalStateException("Xor should not be inplace operation")
             }
-            Operator.MOD -> TODO()
             else -> {}
         }
     }
@@ -707,6 +679,28 @@ class PDP11Generator(program: Program) : Generator(program) {
                 lirOperations.add(LirAsl(operation.operand1.toLirOp()))
             lirOperations.add(LirSob(r, label))
         }
+    }
+
+    private fun removeUselessMovInTheEndOfFunction() {
+        val size = lirOperations.size
+        if (size < 3) return
+        val toRemove = mutableSetOf<LirInstruction>()
+        for (i in 0..size - 3) {
+            val op1 = lirOperations[i]
+            val op2 = lirOperations[i + 1]
+            val op3 = lirOperations[i + 2]
+            if (op3 !is LirRet) continue
+            if ((op1 is LirMov) && (op2 is LirMov)) {
+                if ((op1.src.type == LirOperandType.Register) && (op1.src.name == "R0") &&
+                    (op1.dst == op2.src) && (op2.dst.type == LirOperandType.Register) &&
+                    (op2.dst.name == "R0")
+                ) {
+                    toRemove.add(op1)
+                    toRemove.add(op2)
+                }
+            }
+        }
+        lirOperations.removeAll { toRemove.contains(it) }
     }
 
 }

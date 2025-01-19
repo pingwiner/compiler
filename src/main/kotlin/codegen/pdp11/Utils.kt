@@ -1,5 +1,7 @@
 package org.pingwiner.compiler.codegen.pdp11
 
+import java.util.*
+
 fun oct(arg: String): Int {
     val octalDigits = listOf('0', '1', '2', '3', '4', '5', '6', '7')
 
@@ -16,4 +18,8 @@ fun oct(arg: String): Int {
 
 fun oct(arg: Int): Int {
     return oct(arg.toString())
+}
+
+fun Int.asOctal(): String {
+    return Integer.toOctalString(this)
 }

@@ -348,13 +348,19 @@ class IrGenerator(val program: Program) {
             val thenBranch = IrGenerator(program)
             thenBranch.generateFrom(node.right.left)
             result1 = makeBranch(node.right.left, thenBranch, needReturnValue)
-            operations.add(jump(label2))
+            var jmpGenerated = false
+            if (operations.last() !is Operation.Return) {
+                operations.add(jump(label2))
+                jmpGenerated = true
+            }
             operations.add(Operation.Label(label))
 
             val elseBranch = IrGenerator(program)
             elseBranch.generateFrom(node.right.right)
             result2 = makeBranch(node.right.right, elseBranch, needReturnValue)
-            operations.add(Operation.Label(label2))
+            if (jmpGenerated) {
+                operations.add(Operation.Label(label2))
+            }
 
             if ((thenBranch.operations.size > 0) || (elseBranch.operations.size > 0) || needReturnValue) {
                 hasUsefulOperations = true
