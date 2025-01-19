@@ -6,12 +6,15 @@ import org.pingwiner.compiler.parser.Program
 import org.pingwiner.compiler.parser.Function
 
 class IrGenerator(val program: Program) {
-    private val varValues = mutableMapOf<String, Int>()
+
     private val varRefs = mutableMapOf<String, String>()
     companion object {
         var regCount = 0
         var labelCount = 0
+        val varValues = mutableMapOf<String, Int>()
     }
+
+    val vars get() = varValues
 
     val irFunctions = mutableMapOf<String, IRFunction>()
 
@@ -31,6 +34,7 @@ class IrGenerator(val program: Program) {
         }
         val gen = PDP11Generator(program)
         for (function in program.functions) {
+            varValues.clear()
             currentFunction = function
             operations = mutableListOf()
             operations.add(Operation.Label(currentFunction.name))
@@ -146,7 +150,7 @@ class IrGenerator(val program: Program) {
         for (ref in irGenerator.varRefs.keys) {
             varRefs.remove(ref)
         }
-        for (ref in irGenerator.varValues.keys) {
+        for (ref in irGenerator.vars.keys) {
             varValues.remove(ref)
         }
     }

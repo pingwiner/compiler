@@ -590,8 +590,22 @@ class PDP11Generator(program: Program) : Generator(program) {
                     lirOperations.add(LirSub(operation.operand2.toLirOp(), dst))
                 }
 
-                Operator.MULTIPLY -> TODO()
-                Operator.DIVIDE -> TODO()
+                Operator.MULTIPLY -> {
+                    callExtFun(
+                        "_mul",
+                        operation.operand1.toLirOp(),
+                        operation.operand2.toLirOp(),
+                        dst
+                    )
+                }
+                Operator.DIVIDE -> {
+                    callExtFun(
+                        "_div",
+                        operation.operand1.toLirOp(),
+                        operation.operand2.toLirOp(),
+                        dst
+                    )
+                }
                 Operator.SHR,
                 Operator.SHL -> {
                     lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
@@ -621,6 +635,14 @@ class PDP11Generator(program: Program) : Generator(program) {
                 else -> {}
             }
         }
+    }
+
+    private fun callExtFun(name: String, op1: LirOperand, op2: LirOperand, dst: LirOperand) {
+        lirOperations.add(LirPush(op1))
+        lirOperations.add(LirPush(op2))
+        lirOperations.add(LirCall(name))
+        lirOperations.add(LirAlign(2))
+        lirOperations.add(LirMov(LirOperand(LirOperandType.Register, "R0", 0), dst))
     }
 
     private fun removeUselessMovs(instructions: List<LirInstruction>): List<LirInstruction> =
