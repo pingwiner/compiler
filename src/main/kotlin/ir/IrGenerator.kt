@@ -5,16 +5,42 @@ import org.pingwiner.compiler.parser.ASTNode
 import org.pingwiner.compiler.parser.Program
 import org.pingwiner.compiler.parser.Function
 
-class IrGenerator(val program: Program) {
+class VarValues {
+    private val varValueMap = mutableMapOf<String, Int>()
+    private val _dirty = mutableSetOf<String>()
 
+    operator fun get(key: String): Int? {
+        return varValueMap[key]
+    }
+
+    operator fun set(key: String, value: Int) {
+        _dirty.add(key)
+        varValueMap[key] = value
+    }
+
+    val dirty: Set<String> = _dirty
+
+    fun clear() {
+        varValueMap.clear()
+        _dirty.clear()
+    }
+
+    fun remove(key: String) {
+        _dirty.add(key)
+        varValueMap.remove(key)
+    }
+
+    fun contains(key: String) = varValueMap.contains(key)
+}
+
+class IrGenerator(val program: Program) {
     private val varRefs = mutableMapOf<String, String>()
+    private val varValues = VarValues()
+
     companion object {
         var regCount = 0
         var labelCount = 0
-        val varValues = mutableMapOf<String, Int>()
     }
-
-    val vars get() = varValues
 
     val irFunctions = mutableMapOf<String, IRFunction>()
 
@@ -150,7 +176,7 @@ class IrGenerator(val program: Program) {
         for (ref in irGenerator.varRefs.keys) {
             varRefs.remove(ref)
         }
-        for (ref in irGenerator.vars.keys) {
+        for (ref in irGenerator.varValues.dirty) {
             varValues.remove(ref)
         }
     }
@@ -295,7 +321,7 @@ class IrGenerator(val program: Program) {
             }
         }
         if (op.type == OperandType.Register) {
-            if (varValues.containsKey(op.name)) {
+            if (varValues.contains(op.name)) {
                 return Operation.SetResult(
                     Operand(op.name, OperandType.ImmediateValue, varValues[op.name])
                 )

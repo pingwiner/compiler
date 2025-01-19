@@ -1,11 +1,14 @@
 var arr = {1, 2, 3, 4, 5};
+var g;
 
-fun f1(x, y) {
-    return x / y;
+fun f1() {
+    g = 1;
+    return g;
 }
 
 fun main(arg1, arg2) {
-    a = f1(1, arg1);
+    a = f1();
+    a = a + arr[4] / 2;
     return a;
 }
 
@@ -16,4 +19,13 @@ fun _div(x, y) {
         retVal = retVal + 1;
     } while (x >= y);
     return retVal;
+}
+
+fun _mul(x, y) {
+    result = 0;
+    {
+        result = result + x;
+        y = y - 1;
+    } while(y > 0);
+    return result;
 }
