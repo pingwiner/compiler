@@ -4,14 +4,13 @@ import org.pingwiner.compiler.codegen.*
 import org.pingwiner.compiler.codegen.Operand
 import org.pingwiner.compiler.parser.Program
 
-//TODO: implement stack access for local variables
-
 class PDP11Generator(program: Program) : Generator(program) {
     private val baseAddr = oct(1000)
     private var nextRegNumber = 0
     private val squashedRegisters = mutableMapOf<String, String>()
     private val lirOperations = mutableListOf<LirInstruction>()
     private val functions = mutableMapOf<String, LirFunction>()
+    private val usedFunctions = mutableSetOf("main")
 
     private fun allocReg(): LirOperand {
         nextRegNumber++
@@ -48,10 +47,11 @@ class PDP11Generator(program: Program) : Generator(program) {
                 }
             }
             OperandType.ImmediateValue -> LirOperand(LirOperandType.Immediate, "", this.value ?: 0)
-            OperandType.LocalVariable -> LirOperand(LirOperandType.LocalVar, this.name, 0)
+            OperandType.LocalVariable -> LirOperand(LirOperandType.LocalVar, this.name, this.value ?: 0)
             OperandType.GlobalVariable -> LirOperand(LirOperandType.GlobalVar, this.name, 0)
-            OperandType.Label -> TODO()
-            OperandType.Phi -> TODO()
+            else -> {
+                throw IllegalArgumentException("Unexpected operand")
+            }
         }
     }
 
@@ -209,6 +209,7 @@ class PDP11Generator(program: Program) : Generator(program) {
                 skipNext = false
                 continue
             }
+            // Handle conditional jumps
             if (op != operations.last()) {
                 if (op is Operation.BinaryOperation) {
                     if ((op.result.type == OperandType.Register) && (op.operator.isCondition())) {
@@ -228,7 +229,12 @@ class PDP11Generator(program: Program) : Generator(program) {
             }
             when (op) {
                 is Operation.Assignment -> {
-                    lirOperations.add(LirMov(op.operand.toLirOp(), op.result.toLirOp()))
+                    if ((op.operand.type == OperandType.ImmediateValue) && (op.operand.value == 0)) {
+                        // Replace MOV #0, Rx by BIC Rx, Rx to reduce size
+                        lirOperations.add(LirBic(op.result.toLirOp(), op.result.toLirOp()))
+                    } else {
+                        lirOperations.add(LirMov(op.operand.toLirOp(), op.result.toLirOp()))
+                    }
                 }
                 is Operation.BinaryOperation -> create2OperandInstruction(op)
                 is Operation.Call -> makeCall(op)
@@ -361,7 +367,7 @@ class PDP11Generator(program: Program) : Generator(program) {
     private fun replaceLocalVars(lirFunction: LirFunction) {
         fun replaceOperand(operand: LirOperand): LirOperand {
             if (operand.type != LirOperandType.LocalVar) return operand
-            var offset = lirFunction.getLocalVarOffset(operand.name)
+            var offset = lirFunction.getLocalVarOffset(operand.name) + operand.value
             if (program.functions.find { it.name == lirFunction.name }?.params?.contains(operand.name) == true) {
                offset += 2
             }
@@ -493,7 +499,7 @@ class PDP11Generator(program: Program) : Generator(program) {
     override fun generateAssemblyCode(): String {
         replacePushPopRegs()
         println(".LINK ${baseAddr.asOctal()}\n")
-        for (func in functions.values.sortedBy { it.name != "main" }) {
+        for (func in functions.values.filter { usedFunctions.contains(it.name) }.sortedBy { it.name != "main" }) {
             func.instructions = removeUselessMovs(func.instructions)
             replaceLocalVars(func)
             printLirOperations(func.instructions)
@@ -503,9 +509,21 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     private fun makeCall(op: Operation.Call) {
+        usedFunctions.add(op.label.name)
         lirOperations.add(LirPushRegs())
+        var offset = 0
         for (arg in op.args) {
-            lirOperations.add(LirPush(arg.toLirOp()))
+            if (arg.type == OperandType.LocalVariable) {
+                val newArg = Operand(
+                    arg.name,
+                    OperandType.LocalVariable,
+                    offset
+                )
+                offset += 2
+                lirOperations.add(LirPush(newArg.toLirOp()))
+            } else {
+                lirOperations.add(LirPush(arg.toLirOp()))
+            }
         }
         lirOperations.add(LirCall(op.label.name))
         if (op.args.isNotEmpty()) {
@@ -576,8 +594,7 @@ class PDP11Generator(program: Program) : Generator(program) {
                 }
                 Operator.SHR,
                 Operator.SHL -> {
-                    lirOperations.add(LirMov(operation.operand1.toLirOp(), dst))
-                    makeShift(Operation.BinaryOperation(operation.result, operation.result, operation.operand2, operation.operator))
+                    makeShift(Operation.BinaryOperation(operation.result, operation.operand1, operation.operand2, operation.operator))
                 }
 
                 Operator.OR -> {
@@ -613,8 +630,21 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     private fun callExtFun(name: String, op1: LirOperand, op2: LirOperand, dst: LirOperand) {
-        lirOperations.add(LirPush(op1))
-        lirOperations.add(LirPush(op2))
+        usedFunctions.add(name)
+        var offset = 0
+        fun addOp(op: LirOperand) {
+            if (op.type == LirOperandType.LocalVar) {
+                val newArg = op.copy(
+                    value = offset
+                )
+                offset += 2
+                lirOperations.add(LirPush(newArg))
+            } else {
+                lirOperations.add(LirPush(op))
+            }
+        }
+        addOp(op1)
+        addOp(op2)
         lirOperations.add(LirCall(name))
         lirOperations.add(LirAlign(2))
         lirOperations.add(LirMov(LirOperand(LirOperandType.Register, "R0", 0), dst))
@@ -657,14 +687,17 @@ class PDP11Generator(program: Program) : Generator(program) {
     }
 
     private fun makeShift(operation: Operation.BinaryOperation) {
-        if (operation.operand2.type == OperandType.ImmediateValue) {
-            val shift = operation.operand2.value ?: 0
+        if (operation.result != operation.operand1) {
+            lirOperations.add(LirMov(operation.operand1.toLirOp(), operation.result.toLirOp()))
+        }
+        if ((operation.operand2.type == OperandType.ImmediateValue) && (operation.operand2.value != null) && (operation.operand2.value <= 3)) {
+            val shift = operation.operand2.value
             if (shift > 0) {
                 addOperationXTimes(
                     if (operation.operator == Operator.SHR)
-                        LirAsr(operation.operand1.toLirOp())
+                        LirAsr(operation.result.toLirOp())
                     else
-                        LirAsl(operation.operand1.toLirOp()),
+                        LirAsl(operation.result.toLirOp()),
                     shift
                 )
             }
@@ -674,9 +707,9 @@ class PDP11Generator(program: Program) : Generator(program) {
             val label = "label" + lirOperations.size
             lirOperations.add(LirLabel(label))
             if (operation.operator == Operator.SHR)
-                lirOperations.add(LirAsr(operation.operand1.toLirOp()))
+                lirOperations.add(LirAsr(operation.result.toLirOp()))
             else
-                lirOperations.add(LirAsl(operation.operand1.toLirOp()))
+                lirOperations.add(LirAsl(operation.result.toLirOp()))
             lirOperations.add(LirSob(r, label))
         }
     }

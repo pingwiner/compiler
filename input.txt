@@ -1,6 +1,6 @@
 
 fun f1(x, y) {
-    a = x % y;
+    a = x >> y;
     return a;
 }
 

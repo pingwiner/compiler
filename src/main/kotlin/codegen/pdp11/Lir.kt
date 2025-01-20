@@ -162,47 +162,47 @@ class LirAsl(op: LirOperand): SingleOpInstruction(op) {
 
 class LirJmp(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JMP $label"
+        return "BR $label"
     }
 }
 class LirJe(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JE $label"
+        return "BEQ $label"
     }
 }
 class LirJne(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JNE $label"
+        return "BNE $label"
     }
 }
 class LirJgt(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JGT $label"
+        return "BGT $label"
     }
 }
 class LirJlt(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JLT $label"
+        return "BLT $label"
     }
 }
 class LirJge(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JGE $label"
+        return "BGE $label"
     }
 }
 class LirJle(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JLE $label"
+        return "BLE $label"
     }
 }
 class LirJpl(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JPL $label"
+        return "BPL $label"
     }
 }
 class LirJmi(val label: String): LirInstruction() {
     override fun toString(): String {
-        return "JMI $label"
+        return "BMI $label"
     }
 }
 
