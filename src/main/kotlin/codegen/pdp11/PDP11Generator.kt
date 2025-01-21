@@ -21,6 +21,7 @@ class PDP11Generator(program: Program) : Generator(program) {
     private fun printGlobalVariables(): String {
         val sb = StringBuilder()
         for (v in program.globalVars.values) {
+            if (v.isExtern) continue
             if (v.size == 1) {
                 sb.append("${v.name}:\n    .WORD ${v.value?.get(0)?.asOctal() ?: "0"}")
             } else {

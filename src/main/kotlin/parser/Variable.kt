@@ -6,6 +6,7 @@ import org.pingwiner.compiler.Number
 class Variable(val name: String) {
     var size: Int = 1
     var value: List<Int>? = null
+    var isExtern: Boolean = false
 
     fun isArray() = size > 1
 

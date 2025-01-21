@@ -1,11 +1,11 @@
 
-fun f1(x, y) {
-    a = x >> y;
-    return a;
-}
+extern var screen[10000];
+var g;
 
 fun main(arg1, arg2) {
-    a = f1(arg1, arg2);
+    a = 1;
+    g = a;
+    screen[2] = a;
     return a;
 }
 

@@ -46,6 +46,9 @@ class Program : ParserContext {
                         is Keyword.Var -> {
                             i = parseVar(tokens, i)
                         }
+                        is Keyword.Extern -> {
+                            i = parseVar(tokens, i)
+                        }
                         is Keyword.Const -> {
                             i = parseConst(tokens, i)
                         }
@@ -110,11 +113,18 @@ class Program : ParserContext {
         return functionEndPosition + 1
     }
 
-    private fun parseVar(tokens: List<Token>, start: Int): Int {
+    private fun parseVar(tokens: List<Token>, startPosition: Int): Int {
+        var isExtern = false
+        var start = startPosition
+        if (tokens[start] is Keyword.Extern) {
+            isExtern = true
+            start++
+        }
         val parseResult = Variable.parse(tokens, start)
             ?: throw IllegalArgumentException("Syntax error " + tokens[start].at())
 
         val varName = parseResult.first.name
+        parseResult.first.isExtern = isExtern
         if (!hasVariable(varName)) {
             globalVars[varName] = parseResult.first
         } else {
