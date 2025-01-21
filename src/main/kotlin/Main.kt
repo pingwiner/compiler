@@ -1,16 +1,16 @@
 package org.pingwiner.compiler
 
-import org.pingwiner.compiler.codegen.IrGenerator
-import org.pingwiner.compiler.parser.Parser
+import org.pingwiner.compiler.builder.BuildConfig
+import org.pingwiner.compiler.builder.Builder
 
 fun main() {
-    val reader = Reader("input.txt")
-    val lexer = Lexer()
-    lexer.scan(reader.content)
-    //lexer.printTokens()
-    val parser = Parser()
-    val program = parser.parse(lexer.tokens)
-    val irGenerator = IrGenerator(program)
-    irGenerator.generate()
-    println("")
+    val buildConfig = BuildConfig(
+        sourceList = listOf(
+            "input.txt",
+            "lib.txt"
+        ),
+        includes = listOf("inc.asm")
+    )
+
+    Builder().build(buildConfig)
 }

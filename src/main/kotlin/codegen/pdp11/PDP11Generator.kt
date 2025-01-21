@@ -189,14 +189,16 @@ class PDP11Generator(program: Program) : Generator(program) {
         return op
     }
 
-    private fun printLirOperations(operations: List<LirInstruction>) {
+    private fun printLirOperations(operations: List<LirInstruction>): String {
+        val sb = StringBuilder()
         for (op in operations) {
             if (op is LirLabel) {
-                println("\n" + op.toString())
+                sb.appendLine("\n" + op.toString())
             } else {
-                println("    $op")
+                sb.appendLine("    $op")
             }
         }
+        return sb.toString()
     }
 
     override fun addFunction(name: String, irOperations: List<Operation>) {
@@ -499,14 +501,15 @@ class PDP11Generator(program: Program) : Generator(program) {
 
     override fun generateAssemblyCode(): String {
         replacePushPopRegs()
-        println(".LINK ${baseAddr.asOctal()}\n")
+        val sb = StringBuilder()
+        sb.appendLine(".LINK ${baseAddr.asOctal()}\n")
         for (func in functions.values.filter { usedFunctions.contains(it.name) }.sortedBy { it.name != "main" }) {
             func.instructions = removeUselessMovs(func.instructions)
             replaceLocalVars(func)
-            printLirOperations(func.instructions)
+            sb.append(printLirOperations(func.instructions))
         }
-        println(printGlobalVariables())
-        return ""
+        sb.appendLine(printGlobalVariables())
+        return sb.toString()
     }
 
     private fun makeCall(op: Operation.Call) {

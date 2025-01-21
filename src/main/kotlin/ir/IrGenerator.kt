@@ -48,7 +48,7 @@ class IrGenerator(val program: Program) {
     private lateinit var currentFunction: Function
     private var usedVars = mutableSetOf<String>()
 
-    fun generate() {
+    fun generate(): String {
         for (v in program.globalVars.values) {
             if (v.size == 1) {
                 v.value?.let {
@@ -82,10 +82,10 @@ class IrGenerator(val program: Program) {
                 usedLocalVars,
                 operations
             )
-            printOperations(operations)
+            //printOperations(operations)
             gen.addFunction(currentFunction.name, operations)
         }
-        gen.generateAssemblyCode()
+        return gen.generateAssemblyCode()
     }
 
     private fun generateFrom(node: ASTNode) {

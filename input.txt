@@ -1,36 +1,14 @@
 
-extern var screen[10000];
-var g;
+extern var screen[8192];
 
-fun main(arg1, arg2) {
-    a = 1;
-    g = a;
-    screen[2] = a;
-    return a;
-}
-
-fun _div(x, y) {
-    _R0 = 0;
+fun main() {
+    i = 0;
     {
-        x = x - y;
-        _R0 = _R0 + 1;
-    } while (x >= y);
-    return _R0;
+        screen[i] = i;
+        i = i + 1;
+    } while(i < 4096);
+    {
+    } while (i > 1);
+    return i;
 }
 
-fun _mul(x, y) {
-    _R0 = 0;
-    {
-        _R0 = _R0 + x;
-        y = y - 1;
-    } while(y > 0);
-    return _R0;
-}
-
-fun _mod(x, y) {
-    _R0 = x;
-    {
-        _R0 = _R0 - y;
-    } while (_R0 >= y);
-    return _R0;
-}
